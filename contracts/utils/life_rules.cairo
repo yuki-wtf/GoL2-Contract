@@ -3,9 +3,7 @@ from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.math_cmp import is_nn, is_le, is_in_range
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
-
-const DIM = 15
-
+from contracts.utils.constants import DIM, FIRST_INDEX, LAST_COLUMN_INDEX, LAST_ROW_INDEX
 
 # Executes rounds and returns an array with final state.
 func evaluate_rounds{
@@ -140,27 +138,27 @@ func get_adjecent{
     local LD
     local RD
 
-    if col == 0:
+    if col == FIRST_INDEX:
         # Cell is on left, and needs to wrap.
-        assert L = cell_idx + 14
+        assert L = cell_idx + LAST_COLUMN_INDEX
     else:
         assert L = cell_idx - 1
     end
 
-    if col - 14 == 0:
+    if col == LAST_COLUMN_INDEX:
         # Cell is on right, and needs to wrap.
-        assert R = cell_idx - 14
+        assert R = cell_idx - LAST_COLUMN_INDEX
     else:
         assert R = cell_idx + 1
     end
 
 
     # Bottom neighbours: D, LD, RD
-    if row - 14 == 0:
+    if row == LAST_COLUMN_INDEX:
         # Lower neighbour cells are on top, and need to wrap.
-        assert D = cell_idx - 210 # (DIM - DIM * DIM)
-        assert LD = L - 210
-        assert RD = R - 210
+        assert D = cell_idx - LAST_ROW_INDEX
+        assert LD = L - LAST_ROW_INDEX
+        assert RD = R - LAST_ROW_INDEX
     else:
         # Lower neighbour cells are not top row, don't wrap.
         assert D = cell_idx + DIM
@@ -169,11 +167,11 @@ func get_adjecent{
     end
 
     # Top neighbours: U, LU, RU
-    if row == 0:
+    if row == FIRST_INDEX:
         # Upper neighbour cells are on top, and need to wrap.
-        assert U = cell_idx + 210 # (DIM * DIM - DIM)
-        assert LU = L + 210
-        assert RU = R + 210
+        assert U = cell_idx + LAST_ROW_INDEX
+        assert LU = L + LAST_ROW_INDEX
+        assert RU = R + LAST_ROW_INDEX
     else:
         # Upper neighbour cells are not top row, don't wrap.
         assert U = cell_idx - DIM

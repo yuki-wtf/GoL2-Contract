@@ -2,9 +2,9 @@ from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.pow import pow
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
-from starkware.cairo.common.math import split_int
+from starkware.cairo.common.math import split_int, split_felt
+from contracts.utils.constants import DIM
 
-const DIM = 15
 
 # Cells are packed according to their index
 # Starting from last cell of given array
@@ -35,24 +35,23 @@ func pack_cells{
     
     let (local bit) = pow(2, (cells_len - 1))
     local cell_binary = cells[cells_len - 1] * bit
-    let new_game_value = cell_binary + packed_cells
 
-    return (new_game_value)
+    return (cell_binary + packed_cells)
 end
 
-func unpack_cells{
+func unpack_game{
         syscall_ptr : felt*,
         bitwise_ptr : BitwiseBuiltin*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        high : felt,
-        low : felt
+        game : felt
     ) -> (
         cells_len: felt,
         cells : felt*
     ):
     alloc_locals
+    let (high, low) = split_felt(game)
     let (local cells : felt*) = alloc()
 
     split_int(
@@ -69,7 +68,7 @@ func unpack_cells{
         bound=2,
         output=cells + 112)
 
-    return (225, cells)
+    return (DIM*DIM, cells)
 
 end
 
@@ -79,15 +78,26 @@ func pack_game{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        high : felt, 
-        low: felt
+        cells_len : felt,
+        cells : felt*
     ) -> (
         packed_game
     ):
     alloc_locals
 
-    local bits = 2**128
-    local packed_game = high * bits + low
+    let (high) = pack_cells(
+        cells_len=112,
+        cells=cells,
+        packed_cells=0
+    )
+    let (low) = pack_cells(
+        cells_len=113,
+        cells=cells + 112,
+        packed_cells=0
+    )
+
+    const SHIFT = 2**128
+    local packed_game = high * SHIFT + low
 
     return(packed_game)
 end

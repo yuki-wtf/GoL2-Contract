@@ -6,7 +6,7 @@ from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math import split_felt
 
 from contracts.utils.packing import (pack_cells,
-    unpack_cells, pack_game)
+    unpack_game, pack_game)
 
 @external
 func test_pack_cells{
@@ -35,14 +35,14 @@ func test_pack_cells{
 end
 
 @external
-func test_unpack_cells{
+func test_unpack_game{
         syscall_ptr : felt*,
         bitwise_ptr : BitwiseBuiltin*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }():
     alloc_locals
-    let (unpacked_cells_len, unpacked_cells) = unpack_cells(0, 16)
+    let (unpacked_cells_len, unpacked_cells) = unpack_game(16)
 
     assert unpacked_cells_len = 225
     assert unpacked_cells[0] = 0
@@ -271,21 +271,6 @@ func test_unpack_cells{
     assert unpacked_cells[223] = 0
     assert unpacked_cells[224] = 0
     
-    return ()
-end
-
-@external
-func test_pack_game{
-        syscall_ptr : felt*,
-        bitwise_ptr : BitwiseBuiltin*,
-        pedersen_ptr : HashBuiltin*,
-        range_check_ptr
-    }():
-    let (packed_game) = pack_game(16, 16)
-    let (high, low) = split_felt(packed_game)
-    assert packed_game = 5444517870735015415413993718908291383312
-    assert high = 16
-    assert low = 16
     return ()
 end
 
@@ -525,21 +510,11 @@ func test_pack_game_acorn{
     assert cells[223] = 0
     assert cells[224] = 0
 
-    let (high_acorn) = pack_cells(112, cells, packed_cells=0)
-    let (low_acorn) = pack_cells(113, cells + 112, packed_cells=0)
-
-    assert high_acorn = 633825300114114700748351602688
-    assert low_acorn = 7536656
-
-    let (packed_game) = pack_game(high_acorn, low_acorn)
+    let (packed_game) = pack_game(225, cells)
     assert packed_game = 215679573337205118357336120696157045389097155380324579848828889530384
 
-    let (high_unpacked, low_unpacked) = split_felt(packed_game)
-    assert high_unpacked = high_acorn
-    assert low_unpacked = low_acorn
-
     let (local unpacked_cells : felt*) = alloc()
-    let (unpacked_cells_len, unpacked_cells) = unpack_cells(high_unpacked, low_unpacked)
+    let (unpacked_cells_len, unpacked_cells) = unpack_game(packed_game)
 
     assert unpacked_cells_len = 225
     assert cells[0] = unpacked_cells[0]
@@ -784,16 +759,239 @@ func test_maximum_packed_game{
     # into high and low part
     alloc_locals
 
-    # high is one houndred and twelve ones
-    local high = 5192296858534827628530496329220095
-    # low is one houndred and thirteen ones
-    local low = 10384593717069655257060992658440191
+    let (local cells : felt*) = alloc()
 
-    let (packed_game) = pack_game(high, low)
+    assert cells[0] = 1
+    assert cells[1] = 1
+    assert cells[2] = 1
+    assert cells[3] = 1
+    assert cells[4] = 1
+    assert cells[5] = 1
+    assert cells[6] = 1
+    assert cells[7] = 1
+    assert cells[8] = 1
+    assert cells[9] = 1
+    assert cells[10] = 1
+    assert cells[11] = 1
+    assert cells[12] = 1
+    assert cells[13] = 1
+    assert cells[14] = 1
+    assert cells[15] = 1
+    assert cells[16] = 1
+    assert cells[17] = 1
+    assert cells[18] = 1
+    assert cells[19] = 1
+    assert cells[20] = 1
+    assert cells[21] = 1
+    assert cells[22] = 1
+    assert cells[23] = 1
+    assert cells[24] = 1
+    assert cells[25] = 1
+    assert cells[26] = 1
+    assert cells[27] = 1
+    assert cells[28] = 1
+    assert cells[29] = 1
+    assert cells[30] = 1
+    assert cells[31] = 1
+    assert cells[32] = 1
+    assert cells[33] = 1
+    assert cells[34] = 1
+    assert cells[35] = 1
+    assert cells[36] = 1
+    assert cells[37] = 1
+    assert cells[38] = 1
+    assert cells[39] = 1
+    assert cells[40] = 1
+    assert cells[41] = 1
+    assert cells[42] = 1
+    assert cells[43] = 1
+    assert cells[44] = 1
+    assert cells[45] = 1
+    assert cells[46] = 1
+    assert cells[47] = 1
+    assert cells[48] = 1
+    assert cells[49] = 1
+    assert cells[50] = 1
+    assert cells[51] = 1
+    assert cells[52] = 1
+    assert cells[53] = 1
+    assert cells[54] = 1
+    assert cells[55] = 1
+    assert cells[56] = 1
+    assert cells[57] = 1
+    assert cells[58] = 1
+    assert cells[59] = 1
+    assert cells[60] = 1
+    assert cells[61] = 1
+    assert cells[62] = 1
+    assert cells[63] = 1
+    assert cells[64] = 1
+    assert cells[65] = 1
+    assert cells[66] = 1
+    assert cells[67] = 1
+    assert cells[68] = 1
+    assert cells[69] = 1
+    assert cells[70] = 1
+    assert cells[71] = 1
+    assert cells[72] = 1
+    assert cells[73] = 1
+    assert cells[74] = 1
+    assert cells[75] = 1
+    assert cells[76] = 1
+    assert cells[77] = 1
+    assert cells[78] = 1
+    assert cells[79] = 1
+    assert cells[80] = 1
+    assert cells[81] = 1
+    assert cells[82] = 1
+    assert cells[83] = 1
+    assert cells[84] = 1
+    assert cells[85] = 1
+    assert cells[86] = 1
+    assert cells[87] = 1
+    assert cells[88] = 1
+    assert cells[89] = 1
+    assert cells[90] = 1
+    assert cells[91] = 1
+    assert cells[92] = 1
+    assert cells[93] = 1
+    assert cells[94] = 1
+    assert cells[95] = 1
+    assert cells[96] = 1
+    assert cells[97] = 1
+    assert cells[98] = 1
+    assert cells[99] = 1
+    assert cells[100] = 1
+    assert cells[101] = 1
+    assert cells[102] = 1
+    assert cells[103] = 1
+    assert cells[104] = 1
+    assert cells[105] = 1
+    assert cells[106] = 1
+    assert cells[107] = 1
+    assert cells[108] = 1
+    assert cells[109] = 1
+    assert cells[110] = 1
+    assert cells[111] = 1
+    assert cells[112] = 1
+    assert cells[113] = 1
+    assert cells[114] = 1
+    assert cells[115] = 1
+    assert cells[116] = 1
+    assert cells[117] = 1
+    assert cells[118] = 1
+    assert cells[119] = 1
+    assert cells[120] = 1
+    assert cells[121] = 1
+    assert cells[122] = 1
+    assert cells[123] = 1
+    assert cells[124] = 1
+    assert cells[125] = 1
+    assert cells[126] = 1
+    assert cells[127] = 1
+    assert cells[128] = 1
+    assert cells[129] = 1
+    assert cells[130] = 1
+    assert cells[131] = 1
+    assert cells[132] = 1
+    assert cells[133] = 1
+    assert cells[134] = 1
+    assert cells[135] = 1
+    assert cells[136] = 1
+    assert cells[137] = 1
+    assert cells[138] = 1
+    assert cells[139] = 1
+    assert cells[140] = 1
+    assert cells[141] = 1
+    assert cells[142] = 1
+    assert cells[143] = 1
+    assert cells[144] = 1
+    assert cells[145] = 1
+    assert cells[146] = 1
+    assert cells[147] = 1
+    assert cells[148] = 1
+    assert cells[149] = 1
+    assert cells[150] = 1
+    assert cells[151] = 1
+    assert cells[152] = 1
+    assert cells[153] = 1
+    assert cells[154] = 1
+    assert cells[155] = 1
+    assert cells[156] = 1
+    assert cells[157] = 1
+    assert cells[158] = 1
+    assert cells[159] = 1
+    assert cells[160] = 1
+    assert cells[161] = 1
+    assert cells[162] = 1
+    assert cells[163] = 1
+    assert cells[164] = 1
+    assert cells[165] = 1
+    assert cells[166] = 1
+    assert cells[167] = 1
+    assert cells[168] = 1
+    assert cells[169] = 1
+    assert cells[170] = 1
+    assert cells[171] = 1
+    assert cells[172] = 1
+    assert cells[173] = 1
+    assert cells[174] = 1
+    assert cells[175] = 1
+    assert cells[176] = 1
+    assert cells[177] = 1
+    assert cells[178] = 1
+    assert cells[179] = 1
+    assert cells[180] = 1
+    assert cells[181] = 1
+    assert cells[182] = 1
+    assert cells[183] = 1
+    assert cells[184] = 1
+    assert cells[185] = 1
+    assert cells[186] = 1
+    assert cells[187] = 1
+    assert cells[188] = 1
+    assert cells[189] = 1
+    assert cells[190] = 1
+    assert cells[191] = 1
+    assert cells[192] = 1
+    assert cells[193] = 1
+    assert cells[194] = 1
+    assert cells[195] = 1
+    assert cells[196] = 1
+    assert cells[197] = 1
+    assert cells[198] = 1
+    assert cells[199] = 1
+    assert cells[200] = 1
+    assert cells[201] = 1
+    assert cells[202] = 1
+    assert cells[203] = 1
+    assert cells[204] = 1
+    assert cells[205] = 1
+    assert cells[206] = 1
+    assert cells[207] = 1
+    assert cells[208] = 1
+    assert cells[209] = 1
+    assert cells[210] = 1
+    assert cells[211] = 1
+    assert cells[212] = 1
+    assert cells[213] = 1
+    assert cells[214] = 1
+    assert cells[215] = 1
+    assert cells[216] = 1
+    assert cells[217] = 1
+    assert cells[218] = 1
+    assert cells[219] = 1
+    assert cells[220] = 1
+    assert cells[221] = 1
+    assert cells[222] = 1
+    assert cells[223] = 1
+    assert cells[224] = 1
+
+    let (packed_game) = pack_game(225, cells)
     assert packed_game = 1766847064778384329583297500742918175555501569654225150004059762182848511
 
     let (new_high, new_low) = split_felt(packed_game)
-    assert new_high = high
-    assert new_low = low
+    assert new_high = 5192296858534827628530496329220095
+    assert new_low = 10384593717069655257060992658440191
     return ()
 end

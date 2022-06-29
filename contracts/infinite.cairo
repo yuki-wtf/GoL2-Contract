@@ -4,18 +4,15 @@
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
 from starkware.cairo.common.math import (assert_not_zero, 
-    assert_le_felt, assert_not_equal, split_felt)
+    assert_le_felt, assert_not_equal)
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.memcpy import memcpy
-
-from contracts.utils.packing import pack_game, pack_cells, unpack_cells
-from contracts.utils.life_rules import evaluate_rounds
 from starkware.cairo.common.alloc import alloc
 
+from contracts.utils.packing import pack_game, unpack_game
+from contracts.utils.life_rules import evaluate_rounds
+from contracts.utils.constants import DIM
 
-##### Constants #####
-# Width of the simulation grid.
-const DIM = 15
 
 ##### Storage #####
 
@@ -24,14 +21,14 @@ const DIM = 15
 func current_generation() -> (generation : felt):
 end
 
-# Returns the user_id for a given generation_id.
+# Returns the user_id for a given generation.
 @storage_var
 func owner_of_generation(generation : felt) -> (user_id : felt):
 end
 
 # Returns the total number of credits owned by a user.
 @storage_var
-func count_credits_owned(user_id : felt) -> (credits_owned : felt):
+func credits(user_id : felt) -> (credits : felt):
 end
 
 # Stores cells revival history for user in (cell_index, generation) tuple
@@ -108,7 +105,11 @@ func evolve_and_claim_next_generation{
     alloc_locals
 
     let (caller) = get_caller_address()
-    assert_not_zero(caller)
+    with_attr error_message(
+        "User not authenticated"
+    ):
+        assert_not_zero(caller)
+    end
 
     # Limit to one generation per turn.
     let (local last_gen) = current_generation.read()
@@ -117,39 +118,26 @@ func evolve_and_claim_next_generation{
 
     # Unpack the stored game
     let (game) = historical_state.read(last_gen)
-    let (high, low) = split_felt(game)
-    let (cells_len, cells) = unpack_cells(
-        high=high,
-        low=low
+    let (cells_len, cells) = unpack_game(
+        game=game
     )
 
     # Run the game for the specified number of generations.
     let (local cell_states : felt*) = evaluate_rounds(
         generations, cells)
 
-    # Split the game to high and low parts and pack it for compact storage.
-    let (new_high) = pack_cells(
-        cells_len=112,
-        cells=cell_states,
-        packed_cells=0
-    )
-    let (new_low) = pack_cells(
-        cells_len=113,
-        cells=cell_states + 112,
-        packed_cells=0
-    )
-
+    # Pack the game for compact storage.
     let (packed_game) = pack_game(
-        high=new_high,
-        low=new_low
+        cells_len=DIM*DIM,
+        cells=cell_states
     )
 
     historical_state.write(new_gen, packed_game)
     current_generation.write(new_gen)
 
     # Grant credits
-    let (credits) = count_credits_owned.read(caller)
-    count_credits_owned.write(caller, credits + 1)
+    let (credits_count) = credits.read(caller)
+    credits.write(caller, credits_count + 1)
     owner_of_generation.write(new_gen, caller)
 
     game_evolved.emit(
@@ -158,7 +146,7 @@ func evolve_and_claim_next_generation{
     )
     credit_earned.emit(
         user_id=caller,
-        balance=credits + 1
+        balance=credits_count + 1
     )
     return ()
 end
@@ -180,17 +168,29 @@ func give_life_to_cell{
 
     # Only the owner can revive
     let (caller) = get_caller_address()
-    assert_not_zero(caller)
+    with_attr error_message(
+        "User not authenticated"
+    ):
+        assert_not_zero(caller)
+    end
     let (generation) = current_generation.read()
     let (local owner) = owner_of_generation.read(generation)
-    assert owner = caller
+    with_attr error_message(
+        "User {caller} is not the owner of current generation, cannot give life"
+    ):
+        assert owner = caller
+    end
 
-    let (local owned_credits) = count_credits_owned.read(caller)
-    assert_le_felt(1, owned_credits)
+    let (local owned_credits) = credits.read(caller)
+    with_attr error_message(
+        "User {caller} has no credits, cannot give life"
+    ):
+        assert_le_felt(1, owned_credits)
+    end
 
     activate_cell(cell_index)
 
-    count_credits_owned.write(
+    credits.write(
         user_id=caller,
         value=owned_credits - 1
     )
@@ -239,7 +239,7 @@ func user_credits_count{
     ) -> (
         count : felt
     ):
-    let (count) = count_credits_owned.read(user_id)
+    let (count) = credits.read(user_id)
     return(count)
 end
 
@@ -284,17 +284,11 @@ func view_game{
     }(
         generation : felt
     ) -> (
-        cells_len : felt, cells : felt*
+        game_state : felt
     ):
 
-    let (game) = historical_state.read(generation)
-    let (high, low) = split_felt(game)
-    let (cells_len, cells) = unpack_cells(
-        high=high,
-        low=low
-    )
-
-    return (cells_len, cells)
+    let (game_state) = historical_state.read(generation)
+    return (game_state)
 end
 
 # User input may override state to make a cell alive.
@@ -309,39 +303,35 @@ func activate_cell{
     alloc_locals
     let (local updated_cells : felt*) = alloc()
 
-    assert_le_felt(cell_index, DIM*DIM-1)
+    with_attr error_message(
+        "Cell index {cell_index} out of range"
+    ):
+        assert_le_felt(cell_index, DIM*DIM-1)
+    end
+
     local upper_len = DIM*DIM - 1 - cell_index
     local offset = cell_index + 1
 
     let (local generation) = current_generation.read()
     let (local game) = historical_state.read(generation)
-    let (high, low) = split_felt(game)
-    let (cells_len, cells) = unpack_cells(
-        high=high,
-        low=low
+    let (cells_len, cells) = unpack_game(
+        game=game
     )
 
     memcpy(updated_cells, cells, cell_index)
     assert updated_cells[cell_index] = 1
     memcpy(updated_cells + offset, cells + offset, upper_len)    
 
-    let (new_high) = pack_cells(
-        cells_len=112,
-        cells=updated_cells,
-        packed_cells=0
-    )
-    let (new_low) = pack_cells(
-        cells_len=113,
-        cells=updated_cells + 112,
-        packed_cells=0
-    )
-
     let (updated) = pack_game(
-        high=new_high,
-        low=new_low
+        cells_len=DIM*DIM,
+        cells=updated_cells
     )
 
-    assert_not_equal(game, updated)
+    with_attr error_message(
+        "No changes made to the game"
+    ):
+        assert_not_equal(game, updated)
+    end
     historical_state.write(generation, updated)
 
     return ()

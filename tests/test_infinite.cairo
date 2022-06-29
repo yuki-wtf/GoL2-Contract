@@ -6,6 +6,7 @@ from starkware.cairo.common.cairo_builtins import (HashBuiltin,
 from contracts.infinite import (evolve_and_claim_next_generation,
     give_life_to_cell, current_generation_id, user_credits_count,
     get_owner_of_generation, get_revival_history, view_game)
+from tests.utils import view_binary_game
 
 @external
 func test_evolve_and_claim_next_generation{
@@ -34,7 +35,8 @@ func test_evolve_and_claim_next_generation{
     let (gen_owner) = get_owner_of_generation(generation)
     assert gen_owner = user_id
 
-    let (progressed_game_len, progressed_game) = view_game(generation=generation)
+    let (game_state) = view_game(generation=generation)
+    let (progressed_game_len, progressed_game) = view_binary_game(game=game_state)
     assert progressed_game_len = 225
     assert progressed_game[0] = 0
     assert progressed_game[1] = 0
@@ -296,7 +298,8 @@ func test_give_life_to_cell_happy_case{
     assert revived_cell_index = cell_index
     assert revived_generation = generation
 
-    let (revived_game_len, revived_game) = view_game(generation=generation)
+    let (game_state) = view_game(generation=generation)
+    let (revived_game_len, revived_game) = view_binary_game(game=game_state)
     assert revived_game_len = 225
     assert revived_game[0] = 1
     assert revived_game[1] = 0
@@ -538,7 +541,7 @@ func test_give_life_to_cell_no_credits{
     evolve_and_claim_next_generation()
     give_life_to_cell(1)
 
-    %{ expect_revert("TRANSACTION_FAILED") %}
+    %{ expect_revert(error_message="User 123 has no credits, cannot give life") %}
     give_life_to_cell(2)
     %{ stop_prank_callable() %}
     return ()
@@ -556,7 +559,7 @@ func test_give_life_to_cell_wrong_owner{
     %{ stop_prank_callable() %}
 
     %{ start_prank(321) %}
-    %{ expect_revert("TRANSACTION_FAILED") %}
+    %{ expect_revert(error_message="User 321 is not the owner of current generation, cannot give life") %}
     give_life_to_cell(5)
 
     return ()
@@ -571,7 +574,7 @@ func test_give_life_to_cell_out_of_range{
     }():
     %{ start_prank(123) %}
     evolve_and_claim_next_generation()
-    %{ expect_revert("TRANSACTION_FAILED") %}
+    %{ expect_revert(error_message="Cell index 255 out of range") %}
     give_life_to_cell(255)
     return ()
 end
@@ -585,7 +588,7 @@ func test_give_life_to_cell_not_changed{
     }():
     %{ start_prank(123) %}
     evolve_and_claim_next_generation()
-    %{ expect_revert("TRANSACTION_FAILED") %}
+    %{ expect_revert(error_message="No changes made to the game") %}
     give_life_to_cell(113)
     return ()
 end
