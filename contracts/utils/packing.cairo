@@ -16,6 +16,7 @@ func pack_cells{
     }(
         cells_len : felt, 
         cells : felt*, 
+        power : felt,
         packed_cells : felt
     ) -> (
         packed_cells : felt
@@ -26,17 +27,16 @@ func pack_cells{
     if cells_len == 0:
         return (packed_cells)
     end
-
-    let (local packed_cells) = pack_cells(
-        cells_len=cells_len - 1, 
-        cells=cells, 
-        packed_cells=packed_cells
-    )
     
-    let (local bit) = pow(2, (cells_len - 1))
-    local cell_binary = cells[cells_len - 1] * bit
+    local bit = power / 2
+    local value = cells[cells_len - 1] * bit + packed_cells
 
-    return (cell_binary + packed_cells)
+    return pack_cells(
+            cells_len=cells_len - 1,
+            cells=cells,
+            power=bit,
+            packed_cells=value
+        )
 end
 
 func unpack_game{
@@ -88,11 +88,13 @@ func pack_game{
     let (high) = pack_cells(
         cells_len=112,
         cells=cells,
+        power=2**112,
         packed_cells=0
     )
     let (low) = pack_cells(
         cells_len=113,
         cells=cells + 112,
+        power=2**113,
         packed_cells=0
     )
 

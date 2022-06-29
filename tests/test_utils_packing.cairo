@@ -28,7 +28,7 @@ func test_pack_cells{
     assert cells[8] = 0
     assert cells[9] = 0
 
-    let (packed_cells) = pack_cells(10, cells, packed_cells=0)
+    let (packed_cells) = pack_cells(10, cells, power=2**10, packed_cells=0)
     assert packed_cells = 16
 
     return ()

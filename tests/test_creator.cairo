@@ -3,7 +3,7 @@
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
 
-from contracts.creator import (create, contribute, generation_of_game, view_game)
+from contracts.creator import (initializer, create, contribute, generation_of_game, view_game)
 from tests.utils import view_binary_game
 
 @external
@@ -16,6 +16,7 @@ func test_create_happy_case{
     alloc_locals
     const root_game = 215679573337205118357336120696157045389097155380324579848828889530384
     const game_state = 1
+    initializer()
     %{
         expect_events({"name": "game_created", "data": [123, ids.game_state]})
         expect_events({"name": "credit_reduced", "data": [123, 0]})
@@ -70,6 +71,7 @@ func test_create_game_already_exists{
     }():
     alloc_locals
     const acorn = 215679573337205118357336120696157045389097155380324579848828889530384
+    initializer()
     %{ start_prank(123) %}
     contribute(game_id=acorn)
     contribute(game_id=acorn)
@@ -97,6 +99,7 @@ func test_contribute{
     }():
     alloc_locals
     const acorn = 215679573337205118357336120696157045389097155380324579848828889530384
+    initializer()
 
     %{
         expect_events({"name": "contribution_made", "data": [123, ids.acorn, 1]})
