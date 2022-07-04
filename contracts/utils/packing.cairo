@@ -15,7 +15,8 @@ func pack_cells{
         range_check_ptr
     }(
         cells_len : felt, 
-        cells : felt*, 
+        cells : felt*,
+        index : felt,
         power : felt,
         packed_cells : felt
     ) -> (
@@ -24,16 +25,17 @@ func pack_cells{
     
     alloc_locals
     
-    if cells_len == 0:
+    if index == cells_len:
         return (packed_cells)
     end
     
-    local bit = power / 2
-    local value = cells[cells_len - 1] * bit + packed_cells
-
+    local value = cells[index] * power + packed_cells
+    local bit = power * 2
+    
     return pack_cells(
-            cells_len=cells_len - 1,
+            cells_len=cells_len,
             cells=cells,
+            index=index + 1,
             power=bit,
             packed_cells=value
         )
@@ -55,18 +57,18 @@ func unpack_game{
     let (local cells : felt*) = alloc()
 
     split_int(
-        value=high,
-        n=112,
+        value=low,
+        n=128,
         base=2,
         bound=2,
         output=cells)
 
     split_int(
-        value=low,
-        n=113,
+        value=high,
+        n=97,
         base=2,
         bound=2,
-        output=cells + 112)
+        output=cells + 128)
 
     return (DIM*DIM, cells)
 
@@ -85,16 +87,18 @@ func pack_game{
     ):
     alloc_locals
 
-    let (high) = pack_cells(
-        cells_len=112,
+    let (low) = pack_cells(
+        cells_len=128,
         cells=cells,
-        power=2**112,
+        index=0,
+        power=1,
         packed_cells=0
     )
-    let (low) = pack_cells(
-        cells_len=113,
-        cells=cells + 112,
-        power=2**113,
+    let (high) = pack_cells(
+        cells_len=97,
+        cells=cells + 128,
+        index=0,
+        power=1,
         packed_cells=0
     )
 

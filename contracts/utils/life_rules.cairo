@@ -3,7 +3,8 @@ from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.math_cmp import is_nn, is_le, is_in_range
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
-from contracts.utils.constants import DIM, FIRST_INDEX, LAST_COLUMN_INDEX, LAST_ROW_INDEX
+from contracts.utils.constants import (DIM, FIRST_ROW_INDEX, 
+FIRST_COL_INDEX, LAST_COLUMN_INDEX, LAST_ROW_INDEX)
 
 # Executes rounds and returns an array with final state.
 func evaluate_rounds{
@@ -138,7 +139,7 @@ func get_adjecent{
     local LD
     local RD
 
-    if col == FIRST_INDEX:
+    if col == FIRST_COL_INDEX:
         # Cell is on left, and needs to wrap.
         assert L = cell_idx + LAST_COLUMN_INDEX
     else:
@@ -167,7 +168,7 @@ func get_adjecent{
     end
 
     # Top neighbours: U, LU, RU
-    if row == FIRST_INDEX:
+    if row == FIRST_ROW_INDEX:
         # Upper neighbour cells are on top, and need to wrap.
         assert U = cell_idx + LAST_ROW_INDEX
         assert LU = L + LAST_ROW_INDEX

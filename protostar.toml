@@ -14,14 +14,14 @@ protostar_version = "0.2.4"
 libs_path = "lib"
 
 ["protostar.shared_command_configs"]
-cairo_path = ["contracts"]
+cairo_path = ["contracts", "./lib/cairo_contracts/src"]
 
 ["protostar.contracts"]
-infinite = [
-    "contracts/infinite.cairo",
+gol = [
+    "contracts/gol.cairo",
 ]
-creator = [
-    "contracts/creator.cairo"
+proxy = [
+    "lib/cairo_contracts/src/openzeppelin/upgrades/Proxy.cairo",
 ]
 
 [profile.devnet.protostar.deploy]

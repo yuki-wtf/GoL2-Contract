@@ -28,7 +28,7 @@ func test_pack_cells{
     assert cells[8] = 0
     assert cells[9] = 0
 
-    let (packed_cells) = pack_cells(10, cells, power=2**10, packed_cells=0)
+    let (packed_cells) = pack_cells(10, cells, index=0, power=1, packed_cells=0)
     assert packed_cells = 16
 
     return ()
@@ -49,7 +49,7 @@ func test_unpack_game{
     assert unpacked_cells[1] = 0
     assert unpacked_cells[2] = 0
     assert unpacked_cells[3] = 0
-    assert unpacked_cells[4] = 0
+    assert unpacked_cells[4] = 1
     assert unpacked_cells[5] = 0
     assert unpacked_cells[6] = 0
     assert unpacked_cells[7] = 0
@@ -161,7 +161,7 @@ func test_unpack_game{
     assert unpacked_cells[113] = 0
     assert unpacked_cells[114] = 0
     assert unpacked_cells[115] = 0
-    assert unpacked_cells[116] = 1
+    assert unpacked_cells[116] = 0
     assert unpacked_cells[117] = 0
     assert unpacked_cells[118] = 0
     assert unpacked_cells[119] = 0
@@ -511,7 +511,7 @@ func test_pack_game_acorn{
     assert cells[224] = 0
 
     let (packed_game) = pack_game(225, cells)
-    assert packed_game = 215679573337205118357336120696157045389097155380324579848828889530384
+    assert packed_game = 39132555273291485155644251043342963441664
 
     let (local unpacked_cells : felt*) = alloc()
     let (unpacked_cells_len, unpacked_cells) = unpack_game(packed_game)
@@ -753,7 +753,7 @@ func test_maximum_packed_game{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }():
-    # if whole baord is filled with live cells
+    # if whole board is filled with live cells
     # we should still be able to pack the game into one felt
     # the board is 15*15, so max we have 225 cells divided
     # into high and low part
@@ -988,10 +988,10 @@ func test_maximum_packed_game{
     assert cells[224] = 1
 
     let (packed_game) = pack_game(225, cells)
-    assert packed_game = 1766847064778384329583297500742918175555501569654225150004059762182848511
+    assert packed_game = 53919893334301279589334030174039261347274288845081144962207220498431
 
     let (new_high, new_low) = split_felt(packed_game)
-    assert new_high = 5192296858534827628530496329220095
-    assert new_low = 10384593717069655257060992658440191
+    assert new_high = 158456325028528675187087900671
+    assert new_low = 340282366920938463463374607431768211455
     return ()
 end
