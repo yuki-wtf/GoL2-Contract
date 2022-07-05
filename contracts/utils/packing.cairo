@@ -22,21 +22,19 @@ func pack_cells{
     ) -> (
         packed_cells : felt
     ):
-    
-    alloc_locals
-    
+
     if index == cells_len:
         return (packed_cells)
     end
     
-    local value = cells[index] * power + packed_cells
-    local bit = power * 2
+    let value = cells[index] * power + packed_cells
+    let new_power = power * 2
     
     return pack_cells(
             cells_len=cells_len,
             cells=cells,
             index=index + 1,
-            power=bit,
+            power=new_power,
             packed_cells=value
         )
 end
@@ -103,7 +101,7 @@ func pack_game{
     )
 
     const SHIFT = 2**128
-    local packed_game = high * SHIFT + low
+    let packed_game = high * SHIFT + low
 
     return(packed_game)
 end

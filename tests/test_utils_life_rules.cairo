@@ -23,7 +23,7 @@ func test_get_adjecent{
 end
 
 @external
-func test_get_adjecent_wrapped{
+func test_get_adjecent_wrapped_UL{
         range_check_ptr
     }():
     let (L, R, U, D, LU, RU, LD, RD) = get_adjecent(0)
@@ -35,6 +35,54 @@ func test_get_adjecent_wrapped{
     assert RU = 211
     assert LD = 29
     assert RD = 16
+    return ()
+end
+
+@external
+func test_get_adjecent_wrapped_DL{
+        range_check_ptr
+    }():
+    let (L, R, U, D, LU, RU, LD, RD) = get_adjecent(210)
+    assert L = 224
+    assert R = 211
+    assert U = 195
+    assert D = 0
+    assert LU = 209
+    assert RU = 196
+    assert LD = 14
+    assert RD = 1
+    return ()
+end
+
+@external
+func test_get_adjecent_wrapped_UR{
+        range_check_ptr
+    }():
+    let (L, R, U, D, LU, RU, LD, RD) = get_adjecent(14)
+    assert L = 13
+    assert R = 0
+    assert U = 224
+    assert D = 29
+    assert LU = 223
+    assert RU = 210
+    assert LD = 28
+    assert RD = 15
+    return ()
+end
+
+@external
+func test_get_adjecent_wrapped_DR{
+        range_check_ptr
+    }():
+    let (L, R, U, D, LU, RU, LD, RD) = get_adjecent(224)
+    assert L = 223
+    assert R = 210
+    assert U = 209
+    assert D = 14
+    assert LU = 208
+    assert RU = 195
+    assert LD = 13
+    assert RD = 0
     return ()
 end
 
