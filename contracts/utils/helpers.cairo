@@ -10,7 +10,7 @@ from starkware.cairo.common.memcpy import memcpy
 from starkware.cairo.common.uint256 import Uint256
 
 from contracts.utils.life_rules import evaluate_rounds
-from contracts.utils.packing import (unpack_game, pack_game)
+from contracts.utils.packing import (unpack_game, pack_game, pack_single_cell)
 from contracts.utils.constants import (DIM, INFINITE_GAME_GENESIS)
 
 from openzeppelin.token.erc20.library import ERC20
@@ -207,42 +207,29 @@ func activate_cell{
     alloc_locals
 
     assert_valid_cell_index(cell_index)
-    let (local updated_cells : felt*) = alloc()
-
-    local upper_len = DIM*DIM - 1 - cell_index
-    local offset = cell_index + 1
-
-    let (cells_len, cells) = unpack_game(
-        game=current_state
-    )
-
-    memcpy(updated_cells, cells, cell_index)
-    assert updated_cells[cell_index] = 1
-    memcpy(updated_cells + offset, cells + offset, upper_len)    
-
-    let (updated) = pack_game(
-        cells_len=DIM*DIM,
-        cells=updated_cells
+    let (packed_game) = pack_single_cell(
+        cell_index=cell_index,
+        current_state=current_state
     )
 
     with_attr error_message(
         "No changes made to the game"
     ):
-        assert_not_equal(current_state, updated)
+        assert_not_equal(current_state, packed_game)
     end
 
     save_game(
         game_id=INFINITE_GAME_GENESIS,
         generation=generation,
         user_id=caller,
-        packed_game=updated
+        packed_game=packed_game
     )
 
     cell_revived.emit(
         user_id=caller,
         generation=generation,
         cell_index=cell_index,
-        state=updated
+        state=packed_game
     )
 
     return ()

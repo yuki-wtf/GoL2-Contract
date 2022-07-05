@@ -6,3 +6,6 @@ const FIRST_ROW_INDEX = 0
 const FIRST_COL_INDEX = 0
 const LAST_COLUMN_INDEX = 14
 const LAST_ROW_INDEX = 210 # (DIM - DIM * DIM)
+const SHIFT = 2**128
+const LOW_ARRAY_LEN = 128
+const HIGH_ARRAY_LEN = 97

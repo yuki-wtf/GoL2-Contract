@@ -3,7 +3,11 @@ from starkware.cairo.common.pow import pow
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
 from starkware.cairo.common.math import split_int, split_felt
-from contracts.utils.constants import DIM
+from starkware.cairo.common.math_cmp import is_le_felt
+from starkware.cairo.common.bitwise import bitwise_or
+
+from contracts.utils.constants import (DIM, SHIFT,
+    LOW_ARRAY_LEN, HIGH_ARRAY_LEN)
 
 
 # Cells are packed according to their index
@@ -56,17 +60,17 @@ func unpack_game{
 
     split_int(
         value=low,
-        n=128,
+        n=LOW_ARRAY_LEN,
         base=2,
         bound=2,
         output=cells)
 
     split_int(
         value=high,
-        n=97,
+        n=HIGH_ARRAY_LEN,
         base=2,
         bound=2,
-        output=cells + 128)
+        output=cells + LOW_ARRAY_LEN)
 
     return (DIM*DIM, cells)
 
@@ -86,22 +90,54 @@ func pack_game{
     alloc_locals
 
     let (low) = pack_cells(
-        cells_len=128,
+        cells_len=LOW_ARRAY_LEN,
         cells=cells,
         index=0,
         power=1,
         packed_cells=0
     )
     let (high) = pack_cells(
-        cells_len=97,
-        cells=cells + 128,
+        cells_len=HIGH_ARRAY_LEN,
+        cells=cells + LOW_ARRAY_LEN,
         index=0,
         power=1,
         packed_cells=0
     )
-
-    const SHIFT = 2**128
     let packed_game = high * SHIFT + low
 
     return(packed_game)
+end
+
+func pack_single_cell{
+        syscall_ptr : felt*,
+        bitwise_ptr : BitwiseBuiltin*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }(
+        cell_index : felt,
+        current_state : felt
+    ) -> (
+        packed_game : felt
+    ):
+    alloc_locals
+
+    let (high, low) = split_felt(current_state)
+    # determines on which array ("part") the index is placed
+    let (part) = is_le_felt(cell_index, LOW_ARRAY_LEN - 1)
+
+    # Cell lies in the upper part of the board, which is encoded
+    # in "low" part of the felt
+    if part == 1:
+        let (enabled_bit) = pow(2, cell_index)
+        let (updated) = bitwise_or(enabled_bit, low)
+        let packed_game = high * SHIFT + updated
+        return (packed_game)
+    # Else, cell lies in the lower part of the board, which is encoded
+    # in "high" part of the felt
+    else:
+        let (enabled_bit) = pow(2, cell_index - LOW_ARRAY_LEN)
+        let (updated) = bitwise_or(enabled_bit, high)
+        let packed_game = updated * SHIFT + low
+        return (packed_game)
+    end
 end
