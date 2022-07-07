@@ -11,6 +11,9 @@ from contracts.utils.helpers import (pay, reward_user, ensure_user,
     assert_valid_new_game, get_last_state, assert_valid_cell_index,
     create_new_game, activate_cell, evolve_game, assert_game_exists,
     get_game, get_generation, save_game, save_generation)
+from contracts.utils.ERC20 import (name, symbol,
+    totalSupply, decimals, balanceOf, allowance, transfer,
+    transferFrom, approve, increaseAllowance, decreaseAllowance)
 
 from openzeppelin.upgrades.library import Proxy
 from openzeppelin.token.erc20.library import ERC20
