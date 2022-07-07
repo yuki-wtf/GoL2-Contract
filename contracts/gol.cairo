@@ -9,8 +9,8 @@ from contracts.utils.constants import (CREATE_CREDIT_REQUIREMENT,
     INFINITE_GAME_GENESIS, GIVE_LIFE_CREDIT_REQUIREMENT)
 from contracts.utils.helpers import (pay, reward_user, ensure_user,
     assert_valid_new_game, get_last_state, assert_valid_cell_index,
-    create_new_game, activate_cell, evolve_and_save, assert_game_exists,
-    get_game, get_generation)
+    create_new_game, activate_cell, evolve_game, assert_game_exists,
+    get_game, get_generation, save_game, save_generation)
 
 from openzeppelin.upgrades.library import Proxy
 from openzeppelin.token.erc20.library import ERC20
@@ -86,10 +86,19 @@ func evolve{
     ):
     alloc_locals
     let (caller) = ensure_user()
-    evolve_and_save(
+    let (generation, game) = evolve_game(
         game_id=game_id,
         user=caller
-    ) 
+    )
+    save_game(
+        game_id=game_id,
+        generation=generation,
+        packed_game=game
+    )
+    save_generation(
+        game_id=game_id,
+        generation=generation
+    )
     reward_user(user=caller)
 
     return ()
@@ -137,15 +146,14 @@ func view_game{
         game_id : felt,
         generation : felt
     ) -> (
-        generation_owner : felt,
         game_state : felt
     ):
 
-    let (generation_owner, game_state) = get_game(
+    let (game_state) = get_game(
         game_id,
         generation
     )
-    return (generation_owner, game_state)
+    return (game_state)
 end
 
 # Returns the current generation of a given game.

@@ -52,8 +52,7 @@ func test_create_create_happy_case{
     %{ stop_prank_callable() %}
 
     # check the game is properly stored
-    let (game_owner, saved_game) = view_game(game_id=game_state, generation=0)
-    assert game_owner = user_id
+    let (saved_game) = view_game(game_id=game_state, generation=0)
     assert saved_game = game_state
 
     return ()
@@ -108,8 +107,7 @@ func test_create_fully_packed{
 
     create(game_state=game_state)
 
-    let (game_owner, saved_game) = view_game(game_id=game_state, generation=0)
-    assert game_owner = user_id
+    let (saved_game) = view_game(game_id=game_state, generation=0)
     assert saved_game = game_state
 
     return ()
@@ -211,8 +209,7 @@ func test_evolve_infinite{
     let (new_generation) = get_current_generation(game_id=INFINITE_GAME_GENESIS)
     assert new_generation = 1
 
-    let (generation_owner, saved_game) = view_game(game_id=INFINITE_GAME_GENESIS, generation=new_generation)
-    assert generation_owner = user_id
+    let (saved_game) = view_game(game_id=INFINITE_GAME_GENESIS, generation=new_generation)
     assert saved_game = progressed_game
 
     return ()
@@ -261,8 +258,7 @@ func test_evolve_creator{
     let (generation) = get_current_generation(game_id=original_game)
     assert generation = 0
 
-    let (game_owner, saved_game) = view_game(game_id=original_game, generation=generation)
-    assert game_owner = creator_user_id
+    let (saved_game) = view_game(game_id=original_game, generation=generation)
     assert saved_game = original_game
 
     %{ stop_prank_callable = start_prank(ids.evolver_user_id) %}
@@ -274,12 +270,10 @@ func test_evolve_creator{
     let (new_generation) = get_current_generation(game_id=original_game)
     assert new_generation = 1
 
-    let (game_owner, saved_game) = view_game(game_id=original_game, generation=0)
-    assert game_owner = creator_user_id
+    let (saved_game) = view_game(game_id=original_game, generation=0)
     assert saved_game = original_game
 
-    let (generation_owner, saved_game) = view_game(game_id=original_game, generation=1)
-    assert generation_owner = evolver_user_id
+    let (saved_game) = view_game(game_id=original_game, generation=1)
     assert saved_game = progressed_game
 
     return ()
@@ -315,8 +309,7 @@ func test_give_life_to_cell_happy_case{
     let (generation) = get_current_generation(game_id=INFINITE_GAME_GENESIS)
     assert generation = 1
 
-    let (generation_owner, saved_game) = view_game(game_id=INFINITE_GAME_GENESIS, generation=generation)
-    assert generation_owner = user_id
+    let (saved_game) = view_game(game_id=INFINITE_GAME_GENESIS, generation=generation)
     assert saved_game = evolved_game
 
     return ()

@@ -108,7 +108,7 @@ func pack_game{
     return(packed_game)
 end
 
-func pack_single_cell{
+func revive_cell{
         syscall_ptr : felt*,
         bitwise_ptr : BitwiseBuiltin*,
         pedersen_ptr : HashBuiltin*,
