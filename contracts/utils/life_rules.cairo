@@ -3,9 +3,9 @@ from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.math_cmp import is_nn, is_le, is_in_range
 from starkware.cairo.common.cairo_builtins import (HashBuiltin,
     BitwiseBuiltin)
-
-const DIM = 32
-
+from contracts.utils.constants import (DIM, FIRST_ROW_INDEX, 
+FIRST_COL_INDEX, LAST_COL_INDEX, LAST_ROW_CELL_INDEX, 
+LAST_COL_CELL_INDEX, LAST_ROW_INDEX)
 
 # Executes rounds and returns an array with final state.
 func evaluate_rounds{
@@ -61,7 +61,7 @@ func apply_rules{
     local pedersen_ptr : HashBuiltin* = pedersen_ptr
 
     # Get indices of neighbours.
-    let (L, R, U, D, LU, RU, LD, RD) = get_adjacent(cell_idx)
+    let (L, R, U, D, LU, RU, LD, RD) = get_adjecent(cell_idx)
 
     local range_check_ptr = range_check_ptr
     # Sum of 8 surrounding cells.
@@ -92,7 +92,7 @@ func apply_rules{
     return ()
 end
 
-func get_adjacent{
+func get_adjecent{
         range_check_ptr
     }(
         cell_idx : felt
@@ -140,27 +140,27 @@ func get_adjacent{
     local LD
     local RD
 
-    if col == 0:
+    if col == FIRST_COL_INDEX:
         # Cell is on left, and needs to wrap.
-        assert L = cell_idx + 31
+        assert L = cell_idx + LAST_COL_CELL_INDEX
     else:
         assert L = cell_idx - 1
     end
 
-    if col - 31 == 0:
+    if col == LAST_COL_INDEX:
         # Cell is on right, and needs to wrap.
-        assert R = cell_idx - 31
+        assert R = cell_idx - LAST_COL_CELL_INDEX
     else:
         assert R = cell_idx + 1
     end
 
 
     # Bottom neighbours: D, LD, RD
-    if row - 31 == 0:
+    if row == LAST_ROW_INDEX:
         # Lower neighbour cells are on top, and need to wrap.
-        assert D = cell_idx - 992 # (DIM - DIM * DIM)
-        assert LD = L - 992
-        assert RD = R - 992
+        assert D = cell_idx - LAST_ROW_CELL_INDEX
+        assert LD = L - LAST_ROW_CELL_INDEX
+        assert RD = R - LAST_ROW_CELL_INDEX
     else:
         # Lower neighbour cells are not top row, don't wrap.
         assert D = cell_idx + DIM
@@ -169,11 +169,11 @@ func get_adjacent{
     end
 
     # Top neighbours: U, LU, RU
-    if row == 0:
+    if row == FIRST_ROW_INDEX:
         # Upper neighbour cells are on top, and need to wrap.
-        assert U = cell_idx + 992 # (DIM * DIM - DIM)
-        assert LU = L + 992
-        assert RU = R + 992
+        assert U = cell_idx + LAST_ROW_CELL_INDEX
+        assert LU = L + LAST_ROW_CELL_INDEX
+        assert RU = R + LAST_ROW_CELL_INDEX
     else:
         # Upper neighbour cells are not top row, don't wrap.
         assert U = cell_idx - DIM
