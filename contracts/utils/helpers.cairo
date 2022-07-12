@@ -249,7 +249,7 @@ func create_new_game{
         generation=0
     )
     game_created.emit(
-        owner_id=user_id,
+        user_id=user_id,
         game_id=game_state,
         state=game_state
     )

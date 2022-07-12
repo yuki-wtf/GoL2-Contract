@@ -1,0 +1,30 @@
+{
+  "name": "gol-contract-indexer",
+  "version": "0.0.1",
+  "description": "Indexer for Game of Life contract",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@types/node": "^17.0.25",
+    "bunyan": "^1.8.15",
+    "pg": "^8.7.3",
+    "starknet": "^3.9.0",
+    "typeorm": "^0.3.6"
+  },
+  "devDependencies": {
+    "@types/bunyan": "^1.8.8",
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.3"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "start": "node dist/index.js $APP_TYPE",
+    "dev:indexer": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
+    "dev:viewRefresher": "APP_TYPE=viewRefresher nodemon src/index.ts | bunyan",
+    "migration:before": "rm -fr dist && tsc # We need to remove old compiled migrations, they are not deleted",
+    "migration:generate": "yarn migration:before && typeorm migration:generate -d dist/utils/db.js src/migrations/migration",
+    "migration:run": "yarn migration:before && typeorm migration:run -d dist/utils/db.js"
+  }
+}

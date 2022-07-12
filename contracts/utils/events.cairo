@@ -2,7 +2,7 @@
 
 @event
 func game_created(
-    owner_id: felt,
+    user_id: felt,
     game_id : felt,
     state : felt
 ):
