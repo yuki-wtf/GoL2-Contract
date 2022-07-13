@@ -42,7 +42,6 @@ func initializer{
         token_decimals: felt
     ):
     alloc_locals
-    const generation = 1
 
     let (caller) = get_caller_address()
 
