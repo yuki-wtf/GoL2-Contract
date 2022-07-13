@@ -123,7 +123,7 @@ func save_game{
     return ()
 end
 
-func save_generation{
+func save_generation_id{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -247,7 +247,7 @@ func create_new_game{
         generation=1,
         packed_game=game_state
     )
-    save_generation(
+    save_generation_id(
         game_id=game_state,
         generation=1
     )
