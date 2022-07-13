@@ -52,7 +52,7 @@ func test_create_create_happy_case{
     %{ stop_prank_callable() %}
 
     # check the game is properly stored
-    let (saved_game) = view_game(game_id=game_state, generation=0)
+    let (saved_game) = view_game(game_id=game_state, generation=1)
     assert saved_game = game_state
 
     return ()
@@ -107,7 +107,7 @@ func test_create_fully_packed{
 
     create(game_state=game_state)
 
-    let (saved_game) = view_game(game_id=game_state, generation=0)
+    let (saved_game) = view_game(game_id=game_state, generation=1)
     assert saved_game = game_state
 
     return ()
@@ -194,11 +194,11 @@ func test_evolve_infinite{
     )
 
     %{
-        expect_events({"name": "game_evolved", "data": [ids.user_id, ids.INFINITE_GAME_GENESIS, 1, ids.progressed_game]})
+        expect_events({"name": "game_evolved", "data": [ids.user_id, ids.INFINITE_GAME_GENESIS, 2, ids.progressed_game]})
         expect_events({"name": "Transfer", "data": [0, ids.user_id, 1, 0]})
     %}
     let (generation) = get_current_generation(game_id=INFINITE_GAME_GENESIS)
-    assert generation = 0
+    assert generation = 1
 
     %{ stop_prank_callable = start_prank(ids.user_id) %}
 
@@ -207,7 +207,7 @@ func test_evolve_infinite{
     %{ stop_prank_callable() %}
 
     let (new_generation) = get_current_generation(game_id=INFINITE_GAME_GENESIS)
-    assert new_generation = 1
+    assert new_generation = 2
 
     let (saved_game) = view_game(game_id=INFINITE_GAME_GENESIS, generation=new_generation)
     assert saved_game = progressed_game
@@ -235,7 +235,7 @@ func test_evolve_creator{
     )
 
     %{
-        expect_events({"name": "game_evolved", "data": [ids.evolver_user_id, ids.original_game, 1, ids.progressed_game]})
+        expect_events({"name": "game_evolved", "data": [ids.evolver_user_id, ids.original_game, 2, ids.progressed_game]})
         expect_events({"name": "Transfer", "data": [0, ids.evolver_user_id, 1, 0]})
     %}
 
@@ -256,7 +256,7 @@ func test_evolve_creator{
     %{ stop_prank_callable() %}
 
     let (generation) = get_current_generation(game_id=original_game)
-    assert generation = 0
+    assert generation = 1
 
     let (saved_game) = view_game(game_id=original_game, generation=generation)
     assert saved_game = original_game
@@ -268,12 +268,12 @@ func test_evolve_creator{
     %{ stop_prank_callable() %}
 
     let (new_generation) = get_current_generation(game_id=original_game)
-    assert new_generation = 1
-
-    let (saved_game) = view_game(game_id=original_game, generation=0)
-    assert saved_game = original_game
+    assert new_generation = 2
 
     let (saved_game) = view_game(game_id=original_game, generation=1)
+    assert saved_game = original_game
+
+    let (saved_game) = view_game(game_id=original_game, generation=2)
     assert saved_game = progressed_game
 
     return ()
@@ -297,7 +297,7 @@ func test_give_life_to_cell_happy_case{
         token_decimals=TOKEN_DECIMALS
     )
     %{
-        expect_events({"name": "cell_revived", "data": [ids.user_id, 1, ids.cell_index, ids.evolved_game]})
+        expect_events({"name": "cell_revived", "data": [ids.user_id, 2, ids.cell_index, ids.evolved_game]})
         expect_events({"name": "Transfer", "data": [ids.user_id, 0, 1, 0]})
     %}
 
@@ -307,7 +307,7 @@ func test_give_life_to_cell_happy_case{
     %{ stop_prank_callable() %}
 
     let (generation) = get_current_generation(game_id=INFINITE_GAME_GENESIS)
-    assert generation = 1
+    assert generation = 2
 
     let (saved_game) = view_game(game_id=INFINITE_GAME_GENESIS, generation=generation)
     assert saved_game = evolved_game

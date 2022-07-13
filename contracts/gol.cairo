@@ -10,8 +10,8 @@ from contracts.utils.constants import (CREATE_CREDIT_REQUIREMENT,
 from contracts.utils.helpers import (pay, reward_user, ensure_user,
     assert_valid_new_game, get_last_state, assert_valid_cell_index,
     create_new_game, activate_cell, evolve_game, assert_game_exists,
-    get_game, get_generation, save_game, save_generation)
-from contracts.utils.ERC20 import (name, symbol,
+    get_game, get_generation, save_game, save_generation_id)
+from contracts.ERC20 import (name, symbol,
     totalSupply, decimals, balanceOf, allowance, transfer,
     transferFrom, approve, increaseAllowance, decreaseAllowance)
 
@@ -42,7 +42,6 @@ func initializer{
         token_decimals: felt
     ):
     alloc_locals
-    const generation = 0
 
     let (caller) = get_caller_address()
 
@@ -98,7 +97,7 @@ func evolve{
         generation=generation,
         packed_game=game
     )
-    save_generation(
+    save_generation_id(
         game_id=game_id,
         generation=generation
     )

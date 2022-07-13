@@ -73,6 +73,7 @@ func evolve_game{
 
     let (local prev_generation) = current_generation.read(
         game_id)
+    assert_game_exists(game_id, prev_generation)
     local new_generation = prev_generation + generations
 
     # Unpack the stored game.
@@ -80,7 +81,6 @@ func evolve_game{
         game_id=game_id,
         generation=prev_generation
     )
-    assert_game_exists(game_state)
     let (cells_len, cells) = unpack_game(
         game=game_state
     )
@@ -123,7 +123,7 @@ func save_game{
     return ()
 end
 
-func save_generation{
+func save_generation_id{
         syscall_ptr : felt*,
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
@@ -144,12 +144,15 @@ func assert_game_exists{
         pedersen_ptr : HashBuiltin*,
         range_check_ptr
     }(
-        game : felt
+        game : felt,
+        generation : felt
     ):
     with_attr error_message(
         "Game {game} does not exist"
     ):
-        assert_not_zero(game)
+        let (current_gen) = current_generation.read(game)
+        assert_not_zero(current_gen)
+        assert_le_felt(generation, current_gen)
     end
     return ()
 end
@@ -163,7 +166,7 @@ func assert_game_does_not_exist{
     ):
     alloc_locals
     let (local game_id) = stored_game.read(
-        game_id=game, generation=0)
+        game_id=game, generation=1)
 
     with_attr error_message(
         "Game with genesis state {game} already exists"
@@ -184,9 +187,9 @@ func get_game{
     ) -> (
         game_state : felt
     ):
-
+    alloc_locals
+    assert_game_exists(game_id, generation)
     let (game_state) = stored_game.read(game_id, generation)
-    assert_game_exists(game_state)
     return (game_state)
 end
 
@@ -241,12 +244,12 @@ func create_new_game{
     ):
     save_game(
         game_id=game_state,
-        generation=0,
+        generation=1,
         packed_game=game_state
     )
-    save_generation(
+    save_generation_id(
         game_id=game_state,
-        generation=0
+        generation=1
     )
     game_created.emit(
         owner_id=user_id,
