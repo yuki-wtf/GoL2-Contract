@@ -151,6 +151,7 @@ func assert_game_exists{
         "Game {game} does not exist"
     ):
         let (current_gen) = current_generation.read(game)
+        assert_not_zero(current_gen)
         assert_le_felt(generation, current_gen)
     end
     return ()
@@ -165,7 +166,7 @@ func assert_game_does_not_exist{
     ):
     alloc_locals
     let (local game_id) = stored_game.read(
-        game_id=game, generation=0)
+        game_id=game, generation=1)
 
     with_attr error_message(
         "Game with genesis state {game} already exists"
@@ -243,12 +244,12 @@ func create_new_game{
     ):
     save_game(
         game_id=game_state,
-        generation=0,
+        generation=1,
         packed_game=game_state
     )
     save_generation(
         game_id=game_state,
-        generation=0
+        generation=1
     )
     game_created.emit(
         owner_id=user_id,
