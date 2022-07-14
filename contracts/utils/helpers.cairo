@@ -148,7 +148,7 @@ func assert_game_exists{
         generation : felt
     ):
     with_attr error_message(
-        "Game {game} does not exist"
+        "Game {game} does not exist at generation {generation}"
     ):
         let (current_gen) = current_generation.read(game)
         assert_not_zero(current_gen)
