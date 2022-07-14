@@ -367,6 +367,17 @@ export const abi = [
     {
         "inputs": [
             {
+                "name": "implementation_hash",
+                "type": "felt"
+            }
+        ],
+        "name": "upgrade",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "name": "game_state",
                 "type": "felt"
             }

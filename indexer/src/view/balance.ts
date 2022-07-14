@@ -26,7 +26,7 @@ import { Index, PrimaryColumn, ViewColumn, ViewEntity } from 'typeorm';
       from transfers
       group by "from"
       ) select "to" as "userId",
-               (incoming_credits - outgoing_credits) as balance,
+               (incoming_credits - coalesce(outgoing_credits, 0)) as balance,
                (
                   case
                       when incoming.oldesttransaction>outgoing.oldesttransaction then outgoing.oldesttransaction
