@@ -55,6 +55,19 @@ func initializer{
     return ()
 end
 
+@external
+func upgrade{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    }(
+        implementation_hash: felt
+    ):
+    Proxy.assert_only_admin()
+    Proxy._set_implementation_hash(implementation_hash)
+    return ()
+end
+
 # Create a new game (creator mode)
 @external
 func create{
