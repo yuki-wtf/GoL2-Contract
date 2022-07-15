@@ -8,7 +8,13 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
                (content -> 'game_id')::numeric       "gameId",
                (content -> 'generation')::numeric    "gameGeneration",
                (content -> 'state')::numeric         "gameState",
-               "createdAt"                           "createdAt"
+               "createdAt"                           "createdAt",
+               (
+                  case
+                      when (content -> 'state')::numeric=0 then true
+                      else false
+                      end
+                ) as "gameOver"
         from event 
         where (name='game_evolved' OR name='game_created')
               AND (content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;
@@ -16,7 +22,7 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
     materialized: true,
 })
 // WARNING: INDICES HAVE TO BE CREATED MANUALLY IN MIGRATIONS, EVERY TIME THIS VIEW IS EDITED
-@Index(["transactionType", "transactionOwner", "gameId", "createdAt"])
+@Index(["transactionType", "transactionOwner", "gameId", "createdAt", "gameOver"])
 export class Creator {
     @PrimaryColumn()
     @ViewColumn()
@@ -39,4 +45,7 @@ export class Creator {
 
     @ViewColumn()
     createdAt!: string;
+
+    @ViewColumn()
+    gameOver!: boolean;
 }

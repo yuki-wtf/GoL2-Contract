@@ -8,7 +8,13 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
                (content -> 'generation')::numeric    "gameGeneration",
                (content -> 'state')::numeric         "gameState",
                (content -> 'cell_index')::numeric    "revivedCellIndex",
-               "createdAt"                           "createdAt"
+               "createdAt"                           "createdAt",
+               (
+                  case
+                      when (content -> 'state')::numeric=0 then true
+                      else false
+                      end
+                ) as "gameExtinct"
         from event
         where (name='game_evolved'
                AND (content -> 'game_id')::numeric = 39132555273291485155644251043342963441664)
@@ -17,7 +23,7 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
     materialized: true,
 })
 // WARNING: INDICES HAVE TO BE CREATED MANUALLY IN MIGRATIONS, EVERY TIME THIS VIEW IS EDITED
-@Index(["transactionType", "transactionOwner", "createdAt"])
+@Index(["transactionType", "transactionOwner", "createdAt", "gameExtinct"])
 export class Infinite {
     @PrimaryColumn()
     @ViewColumn()
@@ -40,4 +46,7 @@ export class Infinite {
 
     @ViewColumn()
     createdAt!: string;
+
+    @ViewColumn()
+    gameExtinct!: boolean
 }

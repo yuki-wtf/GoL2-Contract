@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class migration1657634654328 implements MigrationInterface {
-    name = 'migration1657634654328'
+export class migration1657783464236 implements MigrationInterface {
+    name = 'migration1657783464236'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "refresh" ("hash" character varying(65) NOT NULL, "blockIndex" integer NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_b00dbc2a30d3b08a7e0412ed55e" PRIMARY KEY ("hash"))`);
@@ -35,7 +35,7 @@ export class migration1657634654328 implements MigrationInterface {
       from transfers
       group by "from"
       ) select "to" as "userId",
-               (incoming_credits - outgoing_credits) as balance,
+               (incoming_credits - coalesce(outgoing_credits, 0)) as balance,
                (
                   case
                       when incoming.oldesttransaction>outgoing.oldesttransaction then outgoing.oldesttransaction
@@ -71,7 +71,13 @@ export class migration1657634654328 implements MigrationInterface {
                (content -> 'game_id')::numeric       "gameId",
                (content -> 'generation')::numeric    "gameGeneration",
                (content -> 'state')::numeric         "gameState",
-               "createdAt"                           "createdAt"
+               "createdAt"                           "createdAt",
+               (
+                  case
+                      when (content -> 'state')::numeric=0 then true
+                      else false
+                      end
+                ) as "gameOver"
         from event 
         where (name='game_evolved' OR name='game_created')
               AND (content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;
@@ -84,10 +90,11 @@ export class migration1657634654328 implements MigrationInterface {
             "transactionType",
             "transactionOwner",
             "gameId",
-            "createdAt"
+            "createdAt",
+            "gameOver"
           );
     `);
-        await queryRunner.query(`INSERT INTO "typeorm_metadata"("database", "schema", "table", "type", "name", "value") VALUES (DEFAULT, $1, DEFAULT, $2, $3, $4)`, ["public","MATERIALIZED_VIEW","creator","select \"txHash\"                              \"transactionHash\",\n               \"name\"                                \"transactionType\",\n               (content -> 'user_id')::numeric       \"transactionOwner\",\n               (content -> 'game_id')::numeric       \"gameId\",\n               (content -> 'generation')::numeric    \"gameGeneration\",\n               (content -> 'state')::numeric         \"gameState\",\n               \"createdAt\"                           \"createdAt\"\n        from event \n        where (name='game_evolved' OR name='game_created')\n              AND (content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;"]);
+        await queryRunner.query(`INSERT INTO "typeorm_metadata"("database", "schema", "table", "type", "name", "value") VALUES (DEFAULT, $1, DEFAULT, $2, $3, $4)`, ["public","MATERIALIZED_VIEW","creator","select \"txHash\"                              \"transactionHash\",\n               \"name\"                                \"transactionType\",\n               (content -> 'user_id')::numeric       \"transactionOwner\",\n               (content -> 'game_id')::numeric       \"gameId\",\n               (content -> 'generation')::numeric    \"gameGeneration\",\n               (content -> 'state')::numeric         \"gameState\",\n               \"createdAt\"                           \"createdAt\",\n               (\n                  case\n                      when (content -> 'state')::numeric=0 then true\n                      else false\n                      end\n                ) as \"gameOver\",\n        from event \n        where (name='game_evolved' OR name='game_created')\n              AND (content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;"]);
         await queryRunner.query(`CREATE MATERIALIZED VIEW "infinite" AS 
         select "txHash"                              "transactionHash",
                "name"                                "transactionType",
@@ -95,7 +102,13 @@ export class migration1657634654328 implements MigrationInterface {
                (content -> 'generation')::numeric    "gameGeneration",
                (content -> 'state')::numeric         "gameState",
                (content -> 'cell_index')::numeric    "revivedCellIndex",
-               "createdAt"                           "createdAt"
+               "createdAt"                           "createdAt",
+               (
+                  case
+                      when (content -> 'state')::numeric=0 then true
+                      else false
+                      end
+                ) as "gameExtinct"
         from event
         where (name='game_evolved'
                AND (content -> 'game_id')::numeric = 39132555273291485155644251043342963441664)
@@ -108,10 +121,11 @@ export class migration1657634654328 implements MigrationInterface {
           create index on infinite (
             "transactionType",
             "transactionOwner",
-            "createdAt"
+            "createdAt",
+            "gameExtinct"
           );
     `);
-        await queryRunner.query(`INSERT INTO "typeorm_metadata"("database", "schema", "table", "type", "name", "value") VALUES (DEFAULT, $1, DEFAULT, $2, $3, $4)`, ["public","MATERIALIZED_VIEW","infinite","select \"txHash\"                              \"transactionHash\",\n               \"name\"                                \"transactionType\",\n               (content -> 'user_id')::numeric       \"transactionOwner\",\n               (content -> 'generation')::numeric    \"gameGeneration\",\n               (content -> 'state')::numeric         \"gameState\",\n               (content -> 'cell_index')::numeric    \"revivedCellIndex\",\n               \"createdAt\"                           \"createdAt\"\n        from event\n        where (name='game_evolved'\n               AND (content -> 'game_id')::numeric = 39132555273291485155644251043342963441664)\n               OR name='cell_revived';"]);
+        await queryRunner.query(`INSERT INTO "typeorm_metadata"("database", "schema", "table", "type", "name", "value") VALUES (DEFAULT, $1, DEFAULT, $2, $3, $4)`, ["public","MATERIALIZED_VIEW","infinite","select \"txHash\"                              \"transactionHash\",\n               \"name\"                                \"transactionType\",\n               (content -> 'user_id')::numeric       \"transactionOwner\",\n               (content -> 'generation')::numeric    \"gameGeneration\",\n               (content -> 'state')::numeric         \"gameState\",\n               (content -> 'cell_index')::numeric    \"revivedCellIndex\",\n               \"createdAt\"                           \"createdAt\",\n               (\n                  case\n                      when (content -> 'state')::numeric=0 then true\n                      else false\n                      end\n                ) as \"gameExtinct\",\n        from event\n        where (name='game_evolved'\n               AND (content -> 'game_id')::numeric = 39132555273291485155644251043342963441664)\n               OR name='cell_revived';"]);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
