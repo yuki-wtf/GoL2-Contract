@@ -177,6 +177,27 @@ func test_create_game_already_exists{
 end
 
 @external
+func test_create_game_invalid_user{
+        syscall_ptr : felt*,
+        bitwise_ptr : BitwiseBuiltin*,
+        pedersen_ptr : HashBuiltin*,
+        range_check_ptr
+    }():
+    alloc_locals
+    initializer(
+        proxy_admin=PROXY_ADMIN,
+        token_name=TOKEN_NAME,
+        token_symbol=TOKEN_SYMBOL,
+        token_decimals=TOKEN_DECIMALS
+    )
+
+    %{ expect_revert(error_message="User not authenticated") %}
+    create(game_state=32)
+
+    return ()
+end
+
+@external
 func test_evolve_infinite{
         syscall_ptr : felt*,
         bitwise_ptr : BitwiseBuiltin*,
