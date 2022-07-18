@@ -2,28 +2,31 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
 
 @ViewEntity({
     expression: `
-        select "txHash"                              "transactionHash",
-               "name"                                "transactionType",
-               (content -> 'user_id')::numeric       "transactionOwner",
-               (content -> 'generation')::numeric    "gameGeneration",
-               (content -> 'state')::numeric         "gameState",
-               (content -> 'cell_index')::numeric    "revivedCellIndex",
-               "createdAt"                           "createdAt",
+        select event."txHash"                                    "transactionHash",
+               event."name"                                      "transactionType",
+               (event.content -> 'user_id')::numeric             "transactionOwner",
+               (event.content -> 'generation')::numeric          "gameGeneration",
+               (event.content -> 'state')::numeric               "gameState",
+               (event.content -> 'cell_index')::numeric          "revivedCellIndex",
+               block.status                                      "txStatus",
                (
                   case
-                      when (content -> 'state')::numeric=0 then true
+                      when (event.content -> 'state')::numeric=0 then true
                       else false
                       end
-                ) as "gameExtinct"
+                ) as "gameExtinct",
+               event."createdAt"                                 "createdAt"
         from event
-        where (name='game_evolved'
-               AND (content -> 'game_id')::numeric = 39132555273291485155644251043342963441664)
-               OR name='cell_revived';
+            left join block
+                on event."blockHash" = block.hash
+        where (event.name='game_evolved'
+               AND (event.content -> 'game_id')::numeric = 39132555273291485155644251043342963441664)
+               OR event.name='cell_revived';
     `,
     materialized: true,
 })
 // WARNING: INDICES HAVE TO BE CREATED MANUALLY IN MIGRATIONS, EVERY TIME THIS VIEW IS EDITED
-@Index(["transactionType", "transactionOwner", "createdAt", "gameExtinct"])
+@Index(["transactionType", "transactionOwner", "createdAt", "gameExtinct", "txStatus"])
 export class Infinite {
     @PrimaryColumn()
     @ViewColumn()
@@ -49,4 +52,7 @@ export class Infinite {
 
     @ViewColumn()
     gameExtinct!: boolean
+
+    @ViewColumn()
+    txStatus!: string;
 }
