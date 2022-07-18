@@ -2,27 +2,30 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
 
 @ViewEntity({
     expression: `
-        select "txHash"                              "transactionHash",
-               "name"                                "transactionType",
-               (content -> 'user_id')::numeric       "transactionOwner",
-               (content -> 'game_id')::numeric       "gameId",
-               (content -> 'generation')::numeric    "gameGeneration",
-               (content -> 'state')::numeric         "gameState",
-               "createdAt"                           "createdAt",
+        select event."txHash"                                    "transactionHash",
+               event."name"                                      "transactionType",
+               (event.content -> 'user_id')::numeric             "transactionOwner",
+               (event.content -> 'game_id')::numeric             "gameId",
+               (event.content -> 'generation')::numeric          "gameGeneration",
+               (event.content -> 'state')::numeric               "gameState",
+               block.status                                      "txStatus",
                (
                   case
-                      when (content -> 'state')::numeric=0 then true
+                      when (event.content -> 'state')::numeric=0 then true
                       else false
                       end
-                ) as "gameOver"
-        from event 
-        where (name='game_evolved' OR name='game_created')
-              AND (content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;
+                ) as "gameOver",
+               event."createdAt"                                 "createdAt"
+        from event
+            left join block
+                on event."blockHash" = block.hash
+        where (event.name='game_evolved' OR event.name='game_created')
+              AND (event.content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;
     `,
     materialized: true,
 })
 // WARNING: INDICES HAVE TO BE CREATED MANUALLY IN MIGRATIONS, EVERY TIME THIS VIEW IS EDITED
-@Index(["transactionType", "transactionOwner", "gameId", "createdAt", "gameOver"])
+@Index(["transactionType", "transactionOwner", "gameId", "createdAt", "gameOver", "txStatus"])
 export class Creator {
     @PrimaryColumn()
     @ViewColumn()
@@ -48,4 +51,7 @@ export class Creator {
 
     @ViewColumn()
     gameOver!: boolean;
+
+    @ViewColumn()
+    txStatus!: string;
 }
