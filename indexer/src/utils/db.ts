@@ -4,6 +4,7 @@ import { ColumnMetadata } from "typeorm/metadata/ColumnMetadata";
 import { Refresh } from "../entity/refresh";
 import { Block } from "../entity/block";
 import { Event } from "../entity/event";
+import { Transaction } from "../entity/transaction";
 import { Balance } from "../view/balance";
 import { Creator } from '../view/creator';
 import { Infinite } from '../view/infinite';
@@ -35,7 +36,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: false,
     logging: false,
-    entities: [Block, Event, Refresh, Balance, Creator, Infinite],
+    entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite],
     migrations: ["dist/migrations/*.js"],
     subscribers: [],
 });

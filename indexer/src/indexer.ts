@@ -3,6 +3,7 @@ import { Block } from "./entity/block";
 import { requiredEnv, toBool } from "./utils/envs";
 import { GetBlockResponse, Provider } from "starknet";
 import { Event } from "./entity/event";
+import { Transaction } from "./entity/transaction";
 import { deserializeEvent } from "./utils/events";
 import { logger } from "./utils/logger";
 import { getLastSavedBlock } from "./utils/db";
@@ -21,6 +22,12 @@ type TransactionReceipt = {
 type ReturnedBlock = Omit<GetBlockResponse, "previous_block_hash"> & {
     transaction_receipts: TransactionReceipt[];
     parent_block_hash: string;
+}
+
+type ReturnedTransactionStatus = {
+    tx_status: string,
+    block_hash: string,
+    tx_failure_reason: string[],
 }
 
 const processSince = parseInt(requiredEnv("PROCESS_SINCE"));
@@ -84,11 +91,38 @@ const processNextBlock = async () => {
     ]);
 }
 
+const updateTransactions = async () => {
+    const transactionsToUpdate = await AppDataSource.manager.find(
+        Transaction,
+        {
+            where: [
+                { status: "NOT_RECEIVED" },
+                { status: "RECEIVED" },
+                { status: "PENDING" },
+                { status: "ACCEPTED_ON_L2" },
+            ]
+        }
+    )
+    for (let transaction in transactionsToUpdate) {
+        const tx = await starknet.getTransactionStatus(transactionsToUpdate[transaction].hash) as any as ReturnedTransactionStatus;
+        transactionsToUpdate[transaction].blockHash = tx.block_hash;
+        transactionsToUpdate[transaction].status = tx.tx_status;
+        transactionsToUpdate[transaction].updatedAt = new Date();
+        transactionsToUpdate[transaction].errorContent = tx.tx_failure_reason;
+        logger.info({
+            transactionHash: Number(transactionsToUpdate[transaction].hash),
+            transactionStatus: transactionsToUpdate[transaction].status,
+        }, "Updating transaction.");
+        await AppDataSource.manager.save(transactionsToUpdate[transaction]);
+    }
+}
+
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const indexer = async () => {
     try {
         while (true) {
             await processNextBlock();
+            await updateTransactions();
             await wait(1000);
         }
     } catch (e) {
