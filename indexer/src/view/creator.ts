@@ -8,7 +8,7 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
                (event.content -> 'game_id')::numeric             "gameId",
                (event.content -> 'generation')::numeric          "gameGeneration",
                (event.content -> 'state')::numeric               "gameState",
-               transaction.status                                "txStatus",
+               block.status                                      "txStatus",
                (
                   case
                       when (event.content -> 'state')::numeric=0 then true
@@ -17,8 +17,8 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
                 ) as "gameOver",
                event."createdAt"                                 "createdAt"
         from event
-            left join transaction
-                on event."txHash" = transaction.hash
+            left join block
+                on event."blockHash" = block.hash
         where (event.name='game_evolved' OR event.name='game_created')
               AND (event.content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;
     `,

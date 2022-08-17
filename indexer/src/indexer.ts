@@ -46,18 +46,18 @@ const mapBlock = (block: ReturnedBlock): Block => {
 }
 
 const mapEvents = (block: Block, tx: TransactionReceipt): Event[] =>
-    tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventIndex) => {
-        const event = new Event();
-        event.txHash = tx.transaction_hash;
-        event.eventIndex = eventIndex;
-        event.txIndex = tx.transaction_index;
-        event.block = block;
-        event.blockIndex = block.blockIndex;
-        const processed = deserializeEvent(e.keys[0], e.data);
-        event.name = processed.name;
-        event.content = processed.value;
-        return event;
-    })
+tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventIndex) => {
+    const event = new Event();
+    event.txHash = tx.transaction_hash;
+    event.eventIndex = eventIndex;
+    event.txIndex = tx.transaction_index;
+    event.block = block;
+    event.blockIndex = block.blockIndex;
+    const processed = deserializeEvent(e.keys[0], e.data);
+    event.name = processed.name;
+    event.content = processed.value;
+    return event;
+})
 
 
 const processNextBlock = async () => {
@@ -81,6 +81,8 @@ const processNextBlock = async () => {
             await AppDataSource.manager.remove(lastBlock);
             blockRecord = mapBlock(block);
             receipts = block.transaction_receipts;
+            return;
+
         }
 
     }
@@ -92,17 +94,20 @@ const processNextBlock = async () => {
             logger.info({
                 previouslySavedHash: lastBlock.hash,
             }, "Waiting for the next block.");
-    
+            
             const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
-            pendingBlock.block_hash = 'PENDING';
-            pendingBlock.block_number = nextIndex;
+            if (pendingBlock.block_number == lastBlock.blockIndex) {
+                logger.info({
+                    previouslySavedHash: lastBlock.hash,
+                    previouslySavedIndex: lastBlock.blockIndex,
+                }, "No new block found.");
+                return;
+            }
+            pendingBlock.block_hash ??= 'PENDING';
+            pendingBlock.block_number ??= nextIndex;
             blockRecord = mapBlock(pendingBlock);
             receipts = pendingBlock.transaction_receipts;
-        } else {
-            blockRecord = mapBlock(block);
-            receipts = block.transaction_receipts;
-        }
-        if (lastBlock && block.parent_block_hash !== lastBlock.hash) {
+        } else if (lastBlock && block.parent_block_hash !== lastBlock.hash) {
             logger.warn({
                 savedHash: lastBlock.hash,
                 expectedHash: block.parent_block_hash,
@@ -111,6 +116,12 @@ const processNextBlock = async () => {
             await AppDataSource.manager.remove(lastBlock);
             // Now next processNextBlock will indexer previous block
             return;
+        }
+        else {
+            logger.info({blockHash: Number(block.block_hash)
+            }, "Got a new block.");
+            blockRecord = mapBlock(block);
+            receipts = block.transaction_receipts;
         }
     }
 
@@ -124,7 +135,7 @@ const processNextBlock = async () => {
     await AppDataSource.manager.save([
         blockRecord,
         ...eventRecords,
-    ]);
+        ]);
 }
 
 const updateTransactions = async () => {
@@ -132,13 +143,13 @@ const updateTransactions = async () => {
         Transaction,
         {
             where: [
-                { status: "NOT_RECEIVED" },
-                { status: "RECEIVED" },
-                { status: "PENDING" },
-                { status: "ACCEPTED_ON_L2" },
+            { status: "NOT_RECEIVED" },
+            { status: "RECEIVED" },
+            { status: "PENDING" },
+            { status: "ACCEPTED_ON_L2" },
             ]
         }
-    )
+        )
     for (let transaction in transactionsToUpdate) {
         const tx = await starknet.getTransactionStatus(transactionsToUpdate[transaction].hash) as any as ReturnedTransactionStatus;
         transactionsToUpdate[transaction].blockHash = tx.block_hash;
@@ -159,7 +170,7 @@ export const indexer = async () => {
         while (true) {
             await processNextBlock();
             await updateTransactions();
-            await wait(1000);
+            await wait(3000);
         }
     } catch (e) {
         if (e instanceof Error && e.message.includes("BLOCK_NOT_FOUND")) {
