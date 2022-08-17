@@ -405,7 +405,7 @@ protostar build
 To deploy contract run:
 ```bash
 starknet declare --contract ./build/gol.json
-protostar deploy ./build/proxy.json --network <network_name>
+protostar deploy ./build/proxy.json --network <network_name> -i <hash_of_declared_gol_contract>
 ```
 
 To run tests run:

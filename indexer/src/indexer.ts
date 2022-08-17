@@ -46,49 +46,96 @@ const mapBlock = (block: ReturnedBlock): Block => {
 }
 
 const mapEvents = (block: Block, tx: TransactionReceipt): Event[] =>
-    tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventIndex) => {
-        const event = new Event();
-        event.txHash = tx.transaction_hash;
-        event.eventIndex = eventIndex;
-        event.txIndex = tx.transaction_index;
-        event.block = block;
-        event.blockIndex = block.blockIndex;
-        const processed = deserializeEvent(e.keys[0], e.data);
-        event.name = processed.name;
-        event.content = processed.value;
-        return event;
-    })
+tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventIndex) => {
+    const event = new Event();
+    event.txHash = tx.transaction_hash;
+    event.eventIndex = eventIndex;
+    event.txIndex = tx.transaction_index;
+    event.block = block;
+    event.blockIndex = block.blockIndex;
+    const processed = deserializeEvent(e.keys[0], e.data);
+    event.name = processed.name;
+    event.content = processed.value;
+    return event;
+})
 
 
 const processNextBlock = async () => {
     const lastBlock = await getLastSavedBlock();
     const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
-    logger.info({nextIndex}, "Requesting new block.");
-    const block = await starknet.getBlock(nextIndex) as any as ReturnedBlock;
+    let blockRecord: Block;
+    let receipts: TransactionReceipt[];
 
-    if (lastBlock && block.parent_block_hash !== lastBlock.hash) {
-        logger.warn({
-            savedHash: lastBlock.hash,
-            expectedHash: block.parent_block_hash,
-            newBlockHash: block.block_hash,
-        }, "Deleting mismatched block.");
-        await AppDataSource.manager.remove(lastBlock);
-        // Now next processNextBlock will indexer previous block
-        return;
+    if (lastBlock && lastBlock.status == "PENDING") {
+        const block = await starknet.getBlock(lastBlock.blockIndex) as any as ReturnedBlock;
+        if (block.block_hash == undefined) {
+            logger.info("Re-fetching pending block for new updates.");
+            const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
+            pendingBlock.block_hash ??= 'PENDING';
+            pendingBlock.block_number ??= lastBlock.blockIndex;
+            blockRecord = mapBlock(pendingBlock);
+            receipts = pendingBlock.transaction_receipts;
+        }
+        else {
+            logger.info("Pending block got accepted.");
+            await AppDataSource.manager.remove(lastBlock);
+            blockRecord = mapBlock(block);
+            receipts = block.transaction_receipts;
+            return;
+
+        }
+
     }
-    const blockRecord = mapBlock(block);
-    const receipts = block.transaction_receipts;
+    else {
+        logger.info({nextIndex}, "Requesting new block.");
+        const block = await starknet.getBlock(nextIndex) as any as ReturnedBlock;
+
+        if (lastBlock && block.block_hash == undefined) {
+            logger.info({
+                previouslySavedHash: lastBlock.hash,
+            }, "Waiting for the next block.");
+            
+            const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
+            if (pendingBlock.block_number == lastBlock.blockIndex) {
+                logger.info({
+                    previouslySavedHash: lastBlock.hash,
+                    previouslySavedIndex: lastBlock.blockIndex,
+                }, "No new block found.");
+                return;
+            }
+            pendingBlock.block_hash ??= 'PENDING';
+            pendingBlock.block_number ??= nextIndex;
+            blockRecord = mapBlock(pendingBlock);
+            receipts = pendingBlock.transaction_receipts;
+        } else if (lastBlock && block.parent_block_hash !== lastBlock.hash) {
+            logger.warn({
+                savedHash: lastBlock.hash,
+                expectedHash: block.parent_block_hash,
+                newBlockHash: block.block_hash,
+            }, "Deleting mismatched block.");
+            await AppDataSource.manager.remove(lastBlock);
+            // Now next processNextBlock will indexer previous block
+            return;
+        }
+        else {
+            logger.info({blockHash: Number(block.block_hash)
+            }, "Got a new block.");
+            blockRecord = mapBlock(block);
+            receipts = block.transaction_receipts;
+        }
+    }
+
     const eventRecords = receipts.flatMap(receipt => mapEvents(blockRecord, receipt));
 
     logger.info({
         blockHash: Number(blockRecord.hash),
         blockIndex: Number(blockRecord.blockIndex),
         eventsCount: Number(eventRecords.length),
-    }, "Saving new block.");
+    }, "Saving block.");
     await AppDataSource.manager.save([
         blockRecord,
         ...eventRecords,
-    ]);
+        ]);
 }
 
 const updateTransactions = async () => {
@@ -96,13 +143,13 @@ const updateTransactions = async () => {
         Transaction,
         {
             where: [
-                { status: "NOT_RECEIVED" },
-                { status: "RECEIVED" },
-                { status: "PENDING" },
-                { status: "ACCEPTED_ON_L2" },
+            { status: "NOT_RECEIVED" },
+            { status: "RECEIVED" },
+            { status: "PENDING" },
+            { status: "ACCEPTED_ON_L2" },
             ]
         }
-    )
+        )
     for (let transaction in transactionsToUpdate) {
         const tx = await starknet.getTransactionStatus(transactionsToUpdate[transaction].hash) as any as ReturnedTransactionStatus;
         transactionsToUpdate[transaction].blockHash = tx.block_hash;
@@ -123,7 +170,7 @@ export const indexer = async () => {
         while (true) {
             await processNextBlock();
             await updateTransactions();
-            await wait(1000);
+            await wait(3000);
         }
     } catch (e) {
         if (e instanceof Error && e.message.includes("BLOCK_NOT_FOUND")) {
