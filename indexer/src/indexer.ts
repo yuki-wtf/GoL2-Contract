@@ -7,6 +7,7 @@ import { Transaction } from "./entity/transaction";
 import { deserializeEvent } from "./utils/events";
 import { logger } from "./utils/logger";
 import { getLastSavedBlock } from "./utils/db";
+import { viewRefresher } from "./viewRefresher";
 
 type TransactionEvent = {
     from_address: string,
@@ -170,6 +171,7 @@ export const indexer = async () => {
         while (true) {
             await processNextBlock();
             await updateTransactions();
+            await viewRefresher()
             await wait(3000);
         }
     } catch (e) {
