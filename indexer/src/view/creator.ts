@@ -19,7 +19,7 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
         from event
             left join block
                 on event."blockHash" = block.hash
-        where (event.name='game_evolved' OR event.name='game_created')
+        where event.name in ('game_evolved', 'game_created')
               AND (event.content -> 'game_id')::numeric != 39132555273291485155644251043342963441664;
     `,
     materialized: true,
