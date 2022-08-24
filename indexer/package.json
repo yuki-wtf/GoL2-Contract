@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "tsc --build",
-    "start": "node dist/index.js $APP_TYPE",
+    "start": "typeorm migration:run -d dist/utils/db.js && node dist/index.js $APP_TYPE",
     "dev:indexer": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
     "dev:viewRefresher": "APP_TYPE=viewRefresher nodemon src/index.ts | bunyan",
     "migration:before": "rm -fr dist && tsc # We need to remove old compiled migrations, they are not deleted",
