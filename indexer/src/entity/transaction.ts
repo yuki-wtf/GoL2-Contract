@@ -17,9 +17,31 @@ export class Transaction {
     @Column()
     status!: string;
 
+    @Index()
+    @Column()
+    functionName!: string;
+
+    @Index()
+    @Column({type: "numeric"})
+    functionCaller!: string;
+
+    @Index()
+    @Column({type: "integer", nullable: true})
+    functionInputCellIndex!: number;
+
+    @Index()
+    @Column({type: "numeric", nullable: true})
+    functionInputGameState!: string;
+
+    @Index()
+    @Column({type: "numeric", nullable: true})
+    functionInputGameId!: string;
+
+    @Index()
     @CreateDateColumn()
     createdAt!: Date;
 
-    @Column({type: "timestamp"})
+    @Index()
+    @Column({type: "timestamp", nullable: true})
     updatedAt!: Date;
 }
