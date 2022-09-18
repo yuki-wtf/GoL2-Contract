@@ -170,8 +170,8 @@ export const indexer = async () => {
     try {
         while (true) {
             await processNextBlock();
-            await updateTransactions();
             await viewRefresher()
+            await updateTransactions();
             await wait(3000);
         }
     } catch (e) {
