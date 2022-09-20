@@ -147,7 +147,7 @@ const updateTransactions = async () => {
             { status: "NOT_RECEIVED" },
             { status: "RECEIVED" },
             { status: "PENDING" },
-            { status: "ACCEPTED_ON_L2" },
+            // { status: "ACCEPTED_ON_L2" },
             ]
         }
         )
