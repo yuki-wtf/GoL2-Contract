@@ -4,6 +4,7 @@ import {Index, PrimaryColumn, ViewColumn, ViewEntity} from "typeorm";
     expression: `
         select event."txHash" "transactionHash",
             event."name" "transactionType",
+            event."eventIndex" "eventIndex",
             (event.content->'user_id')::numeric "transactionOwner",
             (event.content->'generation')::numeric "gameGeneration",
             (event.content->'state')::numeric "gameState",
@@ -32,6 +33,10 @@ export class Infinite {
     @PrimaryColumn()
     @ViewColumn()
     transactionHash!: string
+
+    @PrimaryColumn({type: "integer"})
+    @ViewColumn()
+    eventIndex!: number;
 
     @ViewColumn()
     transactionType!: string;

@@ -23,7 +23,7 @@
     "start": "typeorm migration:run -d dist/utils/db.js && node dist/index.js $APP_TYPE",
     "dev:indexer": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
     "dev:viewRefresher": "APP_TYPE=viewRefresher nodemon src/index.ts | bunyan",
-    "migration:before": "rm -fr dist && tsc # We need to remove old compiled migrations, they are not deleted",
+    "migration:before": "rm -fr dist && tsc",
     "migration:generate": "yarn migration:before && typeorm migration:generate -d dist/utils/db.js src/migrations/migration",
     "migration:run": "yarn migration:before && typeorm migration:run -d dist/utils/db.js"
   }
