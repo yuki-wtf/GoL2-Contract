@@ -26,5 +26,6 @@
     "migration:before": "rm -fr dist && tsc",
     "migration:generate": "yarn migration:before && typeorm migration:generate -d dist/utils/db.js src/migrations/migration",
     "migration:run": "yarn migration:before && typeorm migration:run -d dist/utils/db.js"
-  }
+  },
+  "packageManager": "yarn@1.22.19"
 }
