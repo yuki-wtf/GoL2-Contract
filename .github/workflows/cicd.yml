@@ -56,7 +56,7 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
           images: '[{"name": "gol2-indexer","image":{"registry_type": "DOCR","repository": "gol2-indexer","tag": "${{ env.tag }}"}}]'
 
-  Deploy-dev:
+  Deploy-production:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: Build
     runs-on: ubuntu-latest
