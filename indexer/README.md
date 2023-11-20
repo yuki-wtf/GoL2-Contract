@@ -72,3 +72,5 @@ gameExtinct: boolean
 ```
 $ yarn dev:indexer|viewRefresher
 ```
+
+
