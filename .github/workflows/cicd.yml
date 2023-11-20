@@ -39,8 +39,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # secrets: |
-          #   "certificate=${{ secrets.CERTIFICATE }}"
+          secrets: |
+            "certificate=${{ secrets.CERTIFICATE }}"
 
   Deploy-review:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
