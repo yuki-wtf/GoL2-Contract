@@ -1,5 +1,7 @@
-import { getSelectorFromName } from "starknet/utils/hash";
+import { selector } from 'starknet'
 import { abi } from "./const";
+
+const { getSelectorFromName } = selector;
 
 type Field = { name: string, type: string };
 type StructsDefinition = Record<string, Field[]>;
