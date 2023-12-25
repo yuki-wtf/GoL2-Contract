@@ -9,6 +9,9 @@ import { Balance } from "../view/balance";
 import { Creator } from '../view/creator';
 import { Infinite } from '../view/infinite';
 
+// Uncomment below in local development
+// import 'dotenv/config'
+
 // We need to store bigints in jsonb column, typeorm doesn't support that.
 // Transformers in typeorm run _before_ typeorm's JSON.stringify run, so it is problematic
 // to use them this way.

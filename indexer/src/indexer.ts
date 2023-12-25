@@ -1,7 +1,7 @@
 import { AppDataSource } from "./utils/db";
 import { Block } from "./entity/block";
 import { requiredEnv, toBool } from "./utils/envs";
-import { GetBlockResponse, Provider } from "starknet";
+import { GetBlockResponse, RpcProvider } from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
 import { deserializeEvent } from "./utils/events";
@@ -33,14 +33,16 @@ type ReturnedTransactionStatus = {
 
 const processSince = parseInt(requiredEnv("PROCESS_SINCE"));
 const contractAddress = BigInt(requiredEnv("CONTRACT_ADDRESS"));
-const useMainnet = toBool(requiredEnv("USE_MAINNET"));
-const starknet = new Provider({network: useMainnet ? "mainnet-alpha" : "goerli-alpha" });
+// const useMainnet = toBool(requiredEnv("USE_MAINNET"));
+const starknet = new RpcProvider({ 
+    nodeUrl: process.env.RPC_NODE_URL,
+});
 
 const mapBlock = (block: ReturnedBlock): Block => {
     const newBlock = new Block();
     newBlock.hash = block.block_hash;
     newBlock.blockIndex = block.block_number;
-    newBlock.parentBlock = block.parent_block_hash;
+    newBlock.parentBlock = block.parent_hash;
     newBlock.timestamp = new Date(Number(block.timestamp) * 1000);
     newBlock.status = block.status;
     return newBlock;
@@ -68,10 +70,10 @@ const processNextBlock = async () => {
     let receipts: TransactionReceipt[];
 
     if (lastBlock && lastBlock.status == "PENDING") {
-        const block = await starknet.getBlock(lastBlock.blockIndex) as any as ReturnedBlock;
+        const block = await starknet.getBlockWithTxHashes(lastBlock.blockIndex) as any as ReturnedBlock;
         if (block.block_hash == undefined) {
             logger.info("Re-fetching pending block for new updates.");
-            const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
+            const pendingBlock = await starknet.getBlockWithTxHashes('pending') as any as ReturnedBlock;
             pendingBlock.block_hash ??= 'PENDING';
             pendingBlock.block_number ??= lastBlock.blockIndex;
             blockRecord = mapBlock(pendingBlock);
@@ -89,14 +91,14 @@ const processNextBlock = async () => {
     }
     else {
         logger.info({nextIndex}, "Requesting new block.");
-        const block = await starknet.getBlock(nextIndex) as any as ReturnedBlock;
+        const block = await starknet.getBlockWithTxHashes(nextIndex) as any as ReturnedBlock;
 
         if (lastBlock && block.block_hash == undefined) {
             logger.info({
                 previouslySavedHash: lastBlock.hash,
             }, "Waiting for the next block.");
             
-            const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
+            const pendingBlock = await starknet.getBlockWithTxHashes('pending') as any as ReturnedBlock;
             if (pendingBlock.block_number == lastBlock.blockIndex) {
                 logger.info({
                     previouslySavedHash: lastBlock.hash,
@@ -126,7 +128,7 @@ const processNextBlock = async () => {
         }
     }
 
-    const eventRecords = receipts.flatMap(receipt => mapEvents(blockRecord, receipt));
+    const eventRecords = receipts?.flatMap(receipt => mapEvents(blockRecord, receipt)) || [];
 
     logger.info({
         blockHash: Number(blockRecord.hash),
