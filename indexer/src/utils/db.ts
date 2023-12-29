@@ -24,6 +24,7 @@ PostgresDriver.prototype.preparePersistentValue = function (value: any, column: 
             (_, v) => typeof v === "bigint" ? `<<${v}>>` : v
         );
         // We want to remove quotes from resulting string
+        if(result === undefined) return result;
         return result.replace(/("<<)|(>>")/gm, "");
     }
 
