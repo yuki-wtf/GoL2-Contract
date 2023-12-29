@@ -13,6 +13,7 @@ const structs = abi.filter(entry => entry.type === "struct").reduce<StructsDefin
 type EventDefinition = { name: string, fields: Field[] }
 type Hash = string;
 const events = abi.filter(entry => entry.type === "event").reduce<Record<Hash, EventDefinition>>((acc, entry) => {
+    // @ts-ignore
     acc[getSelectorFromName(entry.name)] = {name: entry.name, fields: entry.data!};
     return acc;
 }, {});
