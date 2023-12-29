@@ -21,8 +21,7 @@ type TransactionReceipt = {
 }
 // Fix starknet.js types
 type ReturnedBlock = Omit<GetBlockResponse, "previous_block_hash"> & {
-    transaction_receipts: TransactionReceipt[];
-    parent_block_hash: string;
+  parent_hash: string;
 }
 
 type ReturnedTransactionStatus = {
@@ -32,10 +31,11 @@ type ReturnedTransactionStatus = {
 }
 
 const processSince = parseInt(requiredEnv("PROCESS_SINCE"));
+const contractAddressString = requiredEnv("CONTRACT_ADDRESS");
 const contractAddress = BigInt(requiredEnv("CONTRACT_ADDRESS"));
 // const useMainnet = toBool(requiredEnv("USE_MAINNET"));
-const starknet = new RpcProvider({ 
-    nodeUrl: process.env.RPC_NODE_URL,
+const starknet = new RpcProvider({
+  nodeUrl: process.env.RPC_NODE_URL,
 });
 
 const mapBlock = (block: ReturnedBlock): Block => {
@@ -62,28 +62,52 @@ tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventI
     return event;
 })
 
+const mapBlockEvents = (events: any[], block: Block): Event[] =>
+  events
+    .map((e, eventIndex) => {
+      const event = new Event();
+      event.txHash = e.transaction_hash;
+      event.eventIndex = eventIndex;
+      event.txIndex = eventIndex;
+      event.block = block;
+      event.blockIndex = e.block_number;
+    /*   
+      TODO: 
+      Fix deserializeEvent function. Is Abi up to date?
+    */
+
+     event.content = {};
+     event.name = "DummyNameForNow";
+
+      // const processed = deserializeEvent(e.keys[0], e.data);
+      // console.log("processed", processed)
+      // event.name = processed.name;
+      // event.content = processed.value;
+
+      return event;
+});
 
 const processNextBlock = async () => {
     const lastBlock = await getLastSavedBlock();
     const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
     let blockRecord: Block;
-    let receipts: TransactionReceipt[];
+    let receipts: TransactionReceipt[] = [];
 
     if (lastBlock && lastBlock.status == "PENDING") {
-        const block = await starknet.getBlockWithTxHashes(lastBlock.blockIndex) as any as ReturnedBlock;
+        const block = await starknet.getBlockWithTxHashes(lastBlock.blockIndex) as ReturnedBlock;
         if (block.block_hash == undefined) {
             logger.info("Re-fetching pending block for new updates.");
-            const pendingBlock = await starknet.getBlockWithTxHashes('pending') as any as ReturnedBlock;
+            const pendingBlock = await starknet.getBlockWithTxHashes("pending") as ReturnedBlock;
             pendingBlock.block_hash ??= 'PENDING';
             pendingBlock.block_number ??= lastBlock.blockIndex;
             blockRecord = mapBlock(pendingBlock);
-            receipts = pendingBlock.transaction_receipts;
+            receipts = await getBlockEvents(blockRecord);
         }
         else {
             logger.info("Pending block got accepted.");
             await AppDataSource.manager.remove(lastBlock);
             blockRecord = mapBlock(block);
-            receipts = block.transaction_receipts;
+            receipts = await getBlockEvents(blockRecord);
             return;
 
         }
@@ -91,8 +115,9 @@ const processNextBlock = async () => {
     }
     else {
         logger.info({nextIndex}, "Requesting new block.");
-        const block = await starknet.getBlockWithTxHashes(nextIndex) as any as ReturnedBlock;
-
+        const block = (await starknet.getBlockWithTxHashes(
+          nextIndex
+        )) as ReturnedBlock;
         if (lastBlock && block.block_hash == undefined) {
             logger.info({
                 previouslySavedHash: lastBlock.hash,
@@ -109,11 +134,11 @@ const processNextBlock = async () => {
             pendingBlock.block_hash ??= 'PENDING';
             pendingBlock.block_number ??= nextIndex;
             blockRecord = mapBlock(pendingBlock);
-            receipts = pendingBlock.transaction_receipts;
-        } else if (lastBlock && block.parent_block_hash !== lastBlock.hash) {
+            receipts = await getBlockEvents(blockRecord);
+        } else if (lastBlock && block.parent_hash !== lastBlock.hash) {
             logger.warn({
                 savedHash: lastBlock.hash,
-                expectedHash: block.parent_block_hash,
+                expectedHash: block.parent_hash,
                 newBlockHash: block.block_hash,
             }, "Deleting mismatched block.");
             await AppDataSource.manager.remove(lastBlock);
@@ -124,11 +149,11 @@ const processNextBlock = async () => {
             logger.info({blockHash: Number(block.block_hash)
             }, "Got a new block.");
             blockRecord = mapBlock(block);
-            receipts = block.transaction_receipts;
+            receipts = await getBlockEvents(blockRecord)
         }
     }
 
-    const eventRecords = receipts?.flatMap(receipt => mapEvents(blockRecord, receipt)) || [];
+    const eventRecords = mapBlockEvents(receipts, blockRecord) || [];
 
     logger.info({
         blockHash: Number(blockRecord.hash),
@@ -140,6 +165,28 @@ const processNextBlock = async () => {
         ...eventRecords,
         ]);
 }
+
+const getBlockEvents = async (block: Block) => {
+  let continuationToken: string | undefined = 'initial';
+  let allEvents: any[] = []
+  while (continuationToken) {
+    const eventsRes: any = await starknet.getEvents({
+      address: contractAddressString,
+      // keys: [[block.block_hash]],
+      chunk_size: 10,
+      from_block: { block_number: block.blockIndex },
+      to_block: { block_number: block.blockIndex },
+    //   from_block: { block_number: 921929 },
+    //   to_block: { block_number: 921929 },
+      continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
+    });
+    // const nbEvents = eventsRes.events.length;
+    continuationToken = eventsRes.continuation_token;
+    allEvents = [...allEvents, ...eventsRes.events]
+    const updatedEvents = mapBlockEvents(allEvents, block);
+  }
+  return allEvents
+};
 
 const updateTransactions = async () => {
     const transactionsToUpdate = await AppDataSource.manager.find(
@@ -154,9 +201,12 @@ const updateTransactions = async () => {
         }
         )
     for (let transaction in transactionsToUpdate) {
-        const tx = await starknet.getTransactionStatus(transactionsToUpdate[transaction].hash) as any as ReturnedTransactionStatus;
+        const tx = (await starknet.getTransactionStatus(
+          transactionsToUpdate[transaction].hash
+        )) as any as ReturnedTransactionStatus;
         transactionsToUpdate[transaction].blockHash = tx.block_hash;
-        transactionsToUpdate[transaction].status = tx.tx_status;
+        // @ts-ignore
+        transactionsToUpdate[transaction].status = tx.finality_status;
         transactionsToUpdate[transaction].updatedAt = new Date();
         transactionsToUpdate[transaction].errorContent = tx.tx_failure_reason;
         logger.info({
