@@ -1,7 +1,7 @@
 import { AppDataSource } from "./utils/db";
 import { Block } from "./entity/block";
 import { requiredEnv, toBool } from "./utils/envs";
-import { GetBlockResponse, RpcProvider } from "starknet";
+import { BlockIdentifier, GetBlockResponse, RpcProvider } from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
 import { deserializeEvent } from "./utils/events";
@@ -87,21 +87,32 @@ const mapBlockEvents = (events: any[], block: Block): Event[] =>
       return event;
 });
 
+const getBlock = async <T>(blockIdentifier?: BlockIdentifier | undefined): Promise<T | undefined> => {
+    try {
+        const block = await starknet.getBlockWithTxHashes(blockIdentifier);
+        return block as unknown as T
+    } catch (e) {
+        console.log("Block not found", blockIdentifier)
+        return undefined;
+    }
+}
 const processNextBlock = async () => {
     const lastBlock = await getLastSavedBlock();
     const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
-    let blockRecord: Block;
+    let blockRecord: Block | undefined = undefined;
     let receipts: TransactionReceipt[] = [];
 
     if (lastBlock && lastBlock.status == "PENDING") {
-        const block = await starknet.getBlockWithTxHashes(lastBlock.blockIndex) as ReturnedBlock;
-        if (block.block_hash == undefined) {
+        const block = await getBlock<ReturnedBlock>(lastBlock.blockIndex);
+        if (block?.block_hash == undefined) {
             logger.info("Re-fetching pending block for new updates.");
-            const pendingBlock = await starknet.getBlockWithTxHashes("pending") as ReturnedBlock;
-            pendingBlock.block_hash ??= 'PENDING';
-            pendingBlock.block_number ??= lastBlock.blockIndex;
-            blockRecord = mapBlock(pendingBlock);
-            receipts = await getBlockEvents(blockRecord);
+            const pendingBlock = await getBlock<ReturnedBlock>("pending");
+            if(pendingBlock){
+                pendingBlock.block_hash ??= 'PENDING';
+                pendingBlock.block_number ??= lastBlock.blockIndex;
+                blockRecord = mapBlock(pendingBlock);
+                receipts = await getBlockEvents(blockRecord);
+            }
         }
         else {
             logger.info("Pending block got accepted.");
@@ -115,55 +126,61 @@ const processNextBlock = async () => {
     }
     else {
         logger.info({nextIndex}, "Requesting new block.");
-        const block = (await starknet.getBlockWithTxHashes(
+        const block = (await getBlock<ReturnedBlock>(
           nextIndex
-        )) as ReturnedBlock;
-        if (lastBlock && block.block_hash == undefined) {
+        ));
+        if (lastBlock && block?.block_hash == undefined) {
             logger.info({
                 previouslySavedHash: lastBlock.hash,
             }, "Waiting for the next block.");
             
-            const pendingBlock = await starknet.getBlockWithTxHashes('pending') as any as ReturnedBlock;
-            if (pendingBlock.block_number == lastBlock.blockIndex) {
+            const pendingBlock = await getBlock<ReturnedBlock>('pending');
+            if (pendingBlock?.block_number == lastBlock.blockIndex) {
                 logger.info({
                     previouslySavedHash: lastBlock.hash,
                     previouslySavedIndex: lastBlock.blockIndex,
                 }, "No new block found.");
                 return;
             }
-            pendingBlock.block_hash ??= 'PENDING';
-            pendingBlock.block_number ??= nextIndex;
-            blockRecord = mapBlock(pendingBlock);
-            receipts = await getBlockEvents(blockRecord);
-        } else if (lastBlock && block.parent_hash !== lastBlock.hash) {
+            if(pendingBlock){
+                pendingBlock.block_hash ??= 'PENDING';
+                pendingBlock.block_number ??= nextIndex;
+                blockRecord = mapBlock(pendingBlock);
+                receipts = await getBlockEvents(blockRecord);
+            }
+        } else if (lastBlock && block?.parent_hash !== lastBlock.hash) {
             logger.warn({
                 savedHash: lastBlock.hash,
-                expectedHash: block.parent_hash,
-                newBlockHash: block.block_hash,
+                expectedHash: block?.parent_hash,
+                newBlockHash: block?.block_hash,
             }, "Deleting mismatched block.");
             await AppDataSource.manager.remove(lastBlock);
             // Now next processNextBlock will indexer previous block
             return;
         }
         else {
-            logger.info({blockHash: Number(block.block_hash)
+            logger.info({blockHash: Number(block?.block_hash)
             }, "Got a new block.");
-            blockRecord = mapBlock(block);
-            receipts = await getBlockEvents(blockRecord)
+            if(block){
+                blockRecord = mapBlock(block);
+                receipts = await getBlockEvents(blockRecord)
+            }
         }
     }
 
-    const eventRecords = mapBlockEvents(receipts, blockRecord) || [];
+    if(blockRecord){
+        const eventRecords = mapBlockEvents(receipts, blockRecord) || [];
+        logger.info({
+            blockHash: Number(blockRecord.hash),
+            blockIndex: Number(blockRecord.blockIndex),
+            eventsCount: Number(eventRecords.length),
+        }, "Saving block.");
+        await AppDataSource.manager.save([
+            blockRecord,
+            ...eventRecords,
+            ]);
+    }
 
-    logger.info({
-        blockHash: Number(blockRecord.hash),
-        blockIndex: Number(blockRecord.blockIndex),
-        eventsCount: Number(eventRecords.length),
-    }, "Saving block.");
-    await AppDataSource.manager.save([
-        blockRecord,
-        ...eventRecords,
-        ]);
 }
 
 const getBlockEvents = async (block: Block) => {
@@ -176,14 +193,13 @@ const getBlockEvents = async (block: Block) => {
       chunk_size: 10,
       from_block: { block_number: block.blockIndex },
       to_block: { block_number: block.blockIndex },
-    //   from_block: { block_number: 921929 },
-    //   to_block: { block_number: 921929 },
+    //   from_block: { block_number: 925916},
+    //   to_block: { block_number: 925916 },
       continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
     });
     // const nbEvents = eventsRes.events.length;
     continuationToken = eventsRes.continuation_token;
     allEvents = [...allEvents, ...eventsRes.events]
-    const updatedEvents = mapBlockEvents(allEvents, block);
   }
   return allEvents
 };
