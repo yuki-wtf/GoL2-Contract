@@ -62,6 +62,11 @@ tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventI
     return event;
 })
 
+const eventNames: Record<string, string> = {
+    'GameEvolved': 'game_evolved',
+    'GameCreated': 'game_created',
+    'CellRevived': 'cell_revived',
+}
 const mapBlockEvents = (events: any[], block: Block): Event[] =>
   events
     .map((e, eventIndex) => {
@@ -76,13 +81,14 @@ const mapBlockEvents = (events: any[], block: Block): Event[] =>
       Fix deserializeEvent function. Is Abi up to date?
     */
 
-     event.content = {};
-     event.name = "DummyNameForNow";
+    //  event.content = {};
+    //  event.name = "DummyNameForNow";
 
-      // const processed = deserializeEvent(e.keys[0], e.data);
-      // console.log("processed", processed)
-      // event.name = processed.name;
-      // event.content = processed.value;
+      const processed = deserializeEvent(e.keys[0], e.data);
+      if(processed){
+          event.name = eventNames[processed.name] || processed.name;
+          event.content = processed.value;
+      }
 
       return event;
 });
@@ -193,8 +199,8 @@ const getBlockEvents = async (block: Block) => {
       chunk_size: 10,
       from_block: { block_number: block.blockIndex },
       to_block: { block_number: block.blockIndex },
-    //   from_block: { block_number: 925916},
-    //   to_block: { block_number: 925916 },
+    //   from_block: { block_number: 925922},
+    //   to_block: { block_number: 925922 },
       continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
     });
     // const nbEvents = eventsRes.events.length;
