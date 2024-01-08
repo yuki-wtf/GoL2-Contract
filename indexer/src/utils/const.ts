@@ -8,11 +8,11 @@ export const abi = [
   {
     type: "impl",
     name: "UpgradeableImpl",
-    interface_name: "openzeppelin::upgrades::interface::IUpgradeable",
+    interface_name: "IUpgradeable",
   },
   {
     type: "interface",
-    name: "openzeppelin::upgrades::interface::IUpgradeable",
+    name: "IUpgradeable",
     items: [
       {
         type: "function",
@@ -20,7 +20,7 @@ export const abi = [
         inputs: [
           {
             name: "new_class_hash",
-            type: "core::starknet::class_hash::ClassHash",
+            type: "ClassHash",
           },
         ],
         outputs: [],
@@ -31,11 +31,11 @@ export const abi = [
   {
     type: "impl",
     name: "ERC20MetadataImpl",
-    interface_name: "openzeppelin::token::erc20::interface::IERC20Metadata",
+    interface_name: "IERC20Metadata",
   },
   {
     type: "interface",
-    name: "openzeppelin::token::erc20::interface::IERC20Metadata",
+    name: "IERC20Metadata",
     items: [
       {
         type: "function",
@@ -43,7 +43,7 @@ export const abi = [
         inputs: [],
         outputs: [
           {
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         state_mutability: "view",
@@ -54,7 +54,7 @@ export const abi = [
         inputs: [],
         outputs: [
           {
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         state_mutability: "view",
@@ -65,7 +65,7 @@ export const abi = [
         inputs: [],
         outputs: [
           {
-            type: "core::integer::u8",
+            type: "u8",
           },
         ],
         state_mutability: "view",
@@ -75,29 +75,29 @@ export const abi = [
   {
     type: "impl",
     name: "GoL2Impl",
-    interface_name: "gol2::contracts::gol::IGoL2",
+    interface_name: "IGoL2",
   },
   {
     type: "struct",
-    name: "gol2::contracts::gol::GoL2::Snapshot",
+    name: "Snapshot",
     members: [
       {
         name: "user_id",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
       },
       {
         name: "game_state",
-        type: "core::felt252",
+        type: "felt252",
       },
       {
         name: "timestamp",
-        type: "core::integer::u64",
+        type: "u64",
       },
     ],
   },
   {
     type: "interface",
-    name: "gol2::contracts::gol::IGoL2",
+    name: "IGoL2",
     items: [
       {
         type: "function",
@@ -105,16 +105,16 @@ export const abi = [
         inputs: [
           {
             name: "game_id",
-            type: "core::felt252",
+            type: "felt252",
           },
           {
             name: "generation",
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         outputs: [
           {
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         state_mutability: "view",
@@ -125,12 +125,12 @@ export const abi = [
         inputs: [
           {
             name: "game_id",
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         outputs: [
           {
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         state_mutability: "view",
@@ -141,12 +141,12 @@ export const abi = [
         inputs: [
           {
             name: "generation",
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         outputs: [
           {
-            type: "gol2::contracts::gol::GoL2::Snapshot",
+            type: "Snapshot",
           },
         ],
         state_mutability: "view",
@@ -157,7 +157,7 @@ export const abi = [
         inputs: [],
         outputs: [
           {
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         state_mutability: "view",
@@ -168,7 +168,7 @@ export const abi = [
         inputs: [
           {
             name: "game_state",
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         outputs: [],
@@ -180,7 +180,7 @@ export const abi = [
         inputs: [
           {
             name: "game_id",
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         outputs: [],
@@ -192,7 +192,7 @@ export const abi = [
         inputs: [
           {
             name: "game_id",
-            type: "core::felt252",
+            type: "felt252",
           },
         ],
         outputs: [],
@@ -204,7 +204,7 @@ export const abi = [
         inputs: [
           {
             name: "cell_index",
-            type: "core::integer::u32",
+            type: "u32",
           },
         ],
         outputs: [],
@@ -216,7 +216,7 @@ export const abi = [
         inputs: [
           {
             name: "new_class_hash",
-            type: "core::starknet::class_hash::ClassHash",
+            type: "ClassHash",
           },
         ],
         outputs: [],
@@ -234,11 +234,11 @@ export const abi = [
   {
     type: "impl",
     name: "OwnableImpl",
-    interface_name: "openzeppelin::access::ownable::interface::IOwnable",
+    interface_name: "IOwnable",
   },
   {
     type: "interface",
-    name: "openzeppelin::access::ownable::interface::IOwnable",
+    name: "IOwnable",
     items: [
       {
         type: "function",
@@ -246,7 +246,7 @@ export const abi = [
         inputs: [],
         outputs: [
           {
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
         ],
         state_mutability: "view",
@@ -257,7 +257,7 @@ export const abi = [
         inputs: [
           {
             name: "new_owner",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
         ],
         outputs: [],
@@ -275,25 +275,25 @@ export const abi = [
   {
     type: "impl",
     name: "ERC20Impl",
-    interface_name: "openzeppelin::token::erc20::interface::IERC20",
+    interface_name: "IERC20",
   },
   {
     type: "struct",
-    name: "core::integer::u256",
+    name: "u256",
     members: [
       {
         name: "low",
-        type: "core::integer::u128",
+        type: "u128",
       },
       {
         name: "high",
-        type: "core::integer::u128",
+        type: "u128",
       },
     ],
   },
   {
     type: "enum",
-    name: "core::bool",
+    name: "bool",
     variants: [
       {
         name: "False",
@@ -307,7 +307,7 @@ export const abi = [
   },
   {
     type: "interface",
-    name: "openzeppelin::token::erc20::interface::IERC20",
+    name: "IERC20",
     items: [
       {
         type: "function",
@@ -315,7 +315,7 @@ export const abi = [
         inputs: [],
         outputs: [
           {
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         state_mutability: "view",
@@ -326,12 +326,12 @@ export const abi = [
         inputs: [
           {
             name: "account",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
         ],
         outputs: [
           {
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         state_mutability: "view",
@@ -342,16 +342,16 @@ export const abi = [
         inputs: [
           {
             name: "owner",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "spender",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
         ],
         outputs: [
           {
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         state_mutability: "view",
@@ -362,16 +362,16 @@ export const abi = [
         inputs: [
           {
             name: "recipient",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "amount",
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         outputs: [
           {
-            type: "core::bool",
+            type: "bool",
           },
         ],
         state_mutability: "external",
@@ -382,20 +382,20 @@ export const abi = [
         inputs: [
           {
             name: "sender",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "recipient",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "amount",
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         outputs: [
           {
-            type: "core::bool",
+            type: "bool",
           },
         ],
         state_mutability: "external",
@@ -406,16 +406,16 @@ export const abi = [
         inputs: [
           {
             name: "spender",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "amount",
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         outputs: [
           {
-            type: "core::bool",
+            type: "bool",
           },
         ],
         state_mutability: "external",
@@ -425,11 +425,11 @@ export const abi = [
   {
     type: "impl",
     name: "SafeAllowanceImpl",
-    interface_name: "openzeppelin::token::erc20::interface::ISafeAllowance",
+    interface_name: "ISafeAllowance",
   },
   {
     type: "interface",
-    name: "openzeppelin::token::erc20::interface::ISafeAllowance",
+    name: "ISafeAllowance",
     items: [
       {
         type: "function",
@@ -437,16 +437,16 @@ export const abi = [
         inputs: [
           {
             name: "spender",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "added_value",
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         outputs: [
           {
-            type: "core::bool",
+            type: "bool",
           },
         ],
         state_mutability: "external",
@@ -457,16 +457,16 @@ export const abi = [
         inputs: [
           {
             name: "spender",
-            type: "core::starknet::contract_address::ContractAddress",
+            type: "ContractAddress",
           },
           {
             name: "subtracted_value",
-            type: "core::integer::u256",
+            type: "u256",
           },
         ],
         outputs: [
           {
-            type: "core::bool",
+            type: "bool",
           },
         ],
         state_mutability: "external",
@@ -479,233 +479,233 @@ export const abi = [
     inputs: [
       {
         name: "owner",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
       },
     ],
   },
   {
     type: "event",
-    name: "gol2::contracts::gol::GoL2::GameCreated",
+    name: "GameCreated",
     kind: "struct",
     members: [
       {
         name: "user_id",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "game_id",
-        type: "core::felt252",
+        type: "felt252",
         kind: "data",
       },
       {
         name: "state",
-        type: "core::felt252",
+        type: "felt252",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "gol2::contracts::gol::GoL2::GameEvolved",
+    name: "GameEvolved",
     kind: "struct",
     members: [
       {
         name: "user_id",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "game_id",
-        type: "core::felt252",
+        type: "felt252",
         kind: "key",
       },
       {
         name: "generation",
-        type: "core::felt252",
+        type: "felt252",
         kind: "data",
       },
       {
         name: "state",
-        type: "core::felt252",
+        type: "felt252",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "gol2::contracts::gol::GoL2::CellRevived",
+    name: "CellRevived",
     kind: "struct",
     members: [
       {
         name: "user_id",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "generation",
-        type: "core::felt252",
+        type: "felt252",
         kind: "data",
       },
       {
         name: "cell_index",
-        type: "core::integer::u32",
+        type: "u32",
         kind: "data",
       },
       {
         name: "state",
-        type: "core::felt252",
+        type: "felt252",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::access::ownable::ownable::OwnableComponent::OwnershipTransferred",
+    name: "OwnershipTransferred",
     kind: "struct",
     members: [
       {
         name: "previous_owner",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "data",
       },
       {
         name: "new_owner",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::access::ownable::ownable::OwnableComponent::Event",
+    name: "Event",
     kind: "enum",
     variants: [
       {
         name: "OwnershipTransferred",
-        type: "openzeppelin::access::ownable::ownable::OwnableComponent::OwnershipTransferred",
+        type: "OwnershipTransferred",
         kind: "nested",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::upgrades::upgradeable::UpgradeableComponent::Upgraded",
+    name: "Upgraded",
     kind: "struct",
     members: [
       {
         name: "class_hash",
-        type: "core::starknet::class_hash::ClassHash",
+        type: "ClassHash",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::upgrades::upgradeable::UpgradeableComponent::Event",
+    name: "Event",
     kind: "enum",
     variants: [
       {
         name: "Upgraded",
-        type: "openzeppelin::upgrades::upgradeable::UpgradeableComponent::Upgraded",
+        type: "Upgraded",
         kind: "nested",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::token::erc20::erc20::ERC20Component::Transfer",
+    name: "Transfer",
     kind: "struct",
     members: [
       {
         name: "from",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "to",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "value",
-        type: "core::integer::u256",
+        type: "u256",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::token::erc20::erc20::ERC20Component::Approval",
+    name: "Approval",
     kind: "struct",
     members: [
       {
         name: "owner",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "spender",
-        type: "core::starknet::contract_address::ContractAddress",
+        type: "ContractAddress",
         kind: "key",
       },
       {
         name: "value",
-        type: "core::integer::u256",
+        type: "u256",
         kind: "data",
       },
     ],
   },
   {
     type: "event",
-    name: "openzeppelin::token::erc20::erc20::ERC20Component::Event",
+    name: "Event",
     kind: "enum",
     variants: [
       {
         name: "Transfer",
-        type: "openzeppelin::token::erc20::erc20::ERC20Component::Transfer",
+        type: "Transfer",
         kind: "nested",
       },
       {
         name: "Approval",
-        type: "openzeppelin::token::erc20::erc20::ERC20Component::Approval",
+        type: "Approval",
         kind: "nested",
       },
     ],
   },
   {
     type: "event",
-    name: "gol2::contracts::gol::GoL2::Event",
+    name: "Event",
     kind: "enum",
     variants: [
       {
         name: "GameCreated",
-        type: "gol2::contracts::gol::GoL2::GameCreated",
+        type: "GameCreated",
         kind: "nested",
       },
       {
         name: "GameEvolved",
-        type: "gol2::contracts::gol::GoL2::GameEvolved",
+        type: "GameEvolved",
         kind: "nested",
       },
       {
         name: "CellRevived",
-        type: "gol2::contracts::gol::GoL2::CellRevived",
+        type: "CellRevived",
         kind: "nested",
       },
       {
         name: "OwnableEvent",
-        type: "openzeppelin::access::ownable::ownable::OwnableComponent::Event",
+        type: "Event",
         kind: "flat",
       },
       {
         name: "UpgradeableEvent",
-        type: "openzeppelin::upgrades::upgradeable::UpgradeableComponent::Event",
+        type: "Event",
         kind: "flat",
       },
       {
         name: "ERC20Event",
-        type: "openzeppelin::token::erc20::erc20::ERC20Component::Event",
+        type: "Event",
         kind: "flat",
       },
     ],

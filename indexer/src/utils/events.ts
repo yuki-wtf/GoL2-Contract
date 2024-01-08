@@ -13,8 +13,9 @@ const structs = abi.filter(entry => entry.type === "struct").reduce<StructsDefin
 type EventDefinition = { name: string, fields: Field[] }
 type Hash = string;
 const events = abi.filter(entry => entry.type === "event").reduce<Record<Hash, EventDefinition>>((acc, entry) => {
+    const hash = getSelectorFromName(entry.name);
     // @ts-ignore
-    acc[getSelectorFromName(entry.name)] = {name: entry.name, fields: entry.data!};
+    acc[hash] = {name: entry.name, fields: entry.members!};
     return acc;
 }, {});
 
@@ -27,30 +28,43 @@ type DeserializedEvent = {
 const uint256Shift = BigInt("0x100000000000000000000000000000000");
 
 // Mutates values!
-const deserializeValue = (type: string, values: string[]): bigint | Record<string, any> => {
-    if (type === "felt") {
+const deserializeValue = (type: string, values: string[]): any => {
+    if(!values.length) {
+        return;
+    }
+
+    if (type === "felt252" || type === "ContractAddress") {
         const [value] = values.splice(0, 1);
         return BigInt(value);
     }
 
-    if (type === "Uint256") {
+    if (type === "u256") {
         const [low, high] = values.splice(0, 2);
-        return BigInt(low) + BigInt(high) * uint256Shift;
+        if(low && high){
+            return BigInt(low) + BigInt(high) * uint256Shift;
+        }
     }
 
     const structFields = structs[type];
-    return deserializeStruct(structFields, values);
+    if(structFields) {
+        return deserializeStruct(structFields, values);
+    }
 }
 
 // Mutates values!
 const deserializeStruct = (fields: Field[], values: string[]): Record<string, any> =>
-    fields.reduce<Record<string, any>>((acc, field) => {
-        acc[field.name] = deserializeValue(field.type, values);
-        return acc;
-    }, {})
+    {
+        return fields.reduce<Record<string, any>>((acc, field, i) => {
+                const value = deserializeValue(field.type, values);
+                if(value !== undefined){
+                    acc[field.name] = value;
+                }
+            return acc;
+        }, {});
+    }
 
 export const deserializeEvent = (key: string, data: string[]): DeserializedEvent => {
     const eventDefinition = events[key];
-    const value = deserializeStruct(eventDefinition.fields, [...data]);
+    const value = deserializeStruct(eventDefinition.fields || [], [...data]);
     return {name: eventDefinition.name, value}
 }
