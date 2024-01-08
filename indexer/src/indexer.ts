@@ -76,13 +76,6 @@ const mapBlockEvents = (events: any[], block: Block): Event[] =>
       event.txIndex = eventIndex;
       event.block = block;
       event.blockIndex = e.block_number;
-    /*   
-      TODO: 
-      Fix deserializeEvent function. Is Abi up to date?
-    */
-
-    //  event.content = {};
-    //  event.name = "DummyNameForNow";
 
       const processed = deserializeEvent(e.keys[0], e.data);
       if(processed){
