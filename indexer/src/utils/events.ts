@@ -6,7 +6,8 @@ const { getSelectorFromName } = selector;
 type Field = { name: string, type: string };
 type StructsDefinition = Record<string, Field[]>;
 const structs = abi.filter(entry => entry.type === "struct").reduce<StructsDefinition>((acc, entry) => {
-    acc[entry.name] = entry.members!;
+    // @ts-ignore
+    acc[entry.name] = entry.data || entry.members!;
     return acc;
 }, {});
 
