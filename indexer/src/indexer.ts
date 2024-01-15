@@ -1,6 +1,6 @@
 import { AppDataSource } from "./utils/db";
 import { Block } from "./entity/block";
-import { requiredEnv, toBool } from "./utils/envs";
+import { requiredEnv} from "./utils/envs";
 import { BlockIdentifier, GetBlockResponse, RpcProvider } from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
@@ -36,6 +36,7 @@ const contractAddress = BigInt(requiredEnv("CONTRACT_ADDRESS"));
 // const useMainnet = toBool(requiredEnv("USE_MAINNET"));
 const starknet = new RpcProvider({
   nodeUrl: process.env.RPC_NODE_URL,
+//   nodeUrl: "https://free-rpc.nethermind.io/goerli-juno",
 });
 
 const mapBlock = (block: ReturnedBlock): Block => {
@@ -56,7 +57,8 @@ tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventI
     event.txIndex = tx.transaction_index;
     event.block = block;
     event.blockIndex = block.blockIndex;
-    const processed = deserializeEvent(e.keys[0], e.data);
+    const [functName, ...initialData] = e.keys
+    const processed = deserializeEvent(functName, [...initialData, ...e.data]);
     event.name = processed.name;
     event.content = processed.value;
     return event;
@@ -77,7 +79,8 @@ const mapBlockEvents = (events: any[], block: Block): Event[] =>
       event.block = block;
       event.blockIndex = e.block_number;
 
-      const processed = deserializeEvent(e.keys[0], e.data);
+      const [functName, ...initialData] = e.keys
+      const processed = deserializeEvent(functName, [...initialData, ...e.data]);
       if(processed){
           event.name = eventNames[processed.name] || processed.name;
           event.content = processed.value;
@@ -188,7 +191,6 @@ const getBlockEvents = async (block: Block) => {
   while (continuationToken) {
     const eventsRes: any = await starknet.getEvents({
       address: contractAddressString,
-      // keys: [[block.block_hash]],
       chunk_size: 10,
       from_block: { block_number: block.blockIndex },
       to_block: { block_number: block.blockIndex },
@@ -196,7 +198,6 @@ const getBlockEvents = async (block: Block) => {
     //   to_block: { block_number: 925922 },
       continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
     });
-    // const nbEvents = eventsRes.events.length;
     continuationToken = eventsRes.continuation_token;
     allEvents = [...allEvents, ...eventsRes.events]
   }
