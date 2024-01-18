@@ -53,5 +53,5 @@ jobs:
         with:
           app_name: gol2-migration
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          images: '[{"name": "gol-2-indexer","image":{"registry_type": "DOCR","repository": "/gol2-indexer","tag": "${{ env.tag }}"}}]'
+          images: '[{"name": "gol-2-indexer2","image":{"registry_type": "DOCR","repository": "/gol2-indexer","tag": "${{ env.tag }}"}}]'
 
