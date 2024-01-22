@@ -57,6 +57,15 @@ export const getLastSavedBlock = async (): Promise<Block | null> =>
         }
     )
 
+export const getBlockWithLatestIndexNumber = async (): Promise<Block | null> =>
+    AppDataSource.manager.findOne(
+        Block,
+        {
+            where: [{hash: Not(IsNull()), blockIndex: Not(IsNull())}],
+            order: {blockIndex: "desc"},
+        }
+    )
+
 export const getLastRefresh = async (): Promise<Refresh | null> =>
     AppDataSource.manager.findOne(
         Refresh,

@@ -1,4 +1,4 @@
-import { AppDataSource } from "./utils/db";
+import { AppDataSource, getBlockWithLatestIndexNumber } from "./utils/db";
 import { Block } from "./entity/block";
 import { requiredEnv} from "./utils/envs";
 import { BlockIdentifier, GetBlockResponse, RpcProvider } from "starknet";
@@ -100,6 +100,8 @@ const getBlock = async <T>(blockIdentifier?: BlockIdentifier | undefined): Promi
 }
 const processNextBlock = async () => {
     const lastBlock = await getLastSavedBlock();
+    const lastBlockWithIndex = await getBlockWithLatestIndexNumber();
+    const lastSavedIndexNumber = lastBlockWithIndex? lastBlockWithIndex.blockIndex + 1 : processSince;
     const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
     let blockRecord: Block | undefined = undefined;
     let receipts: TransactionReceipt[] = [];
@@ -171,6 +173,7 @@ const processNextBlock = async () => {
     }
 
     if(blockRecord){
+        blockRecord.blockIndex ??= lastSavedIndexNumber;
         const eventRecords = mapBlockEvents(receipts, blockRecord) || [];
         logger.info({
             blockHash: Number(blockRecord.hash),
@@ -193,7 +196,7 @@ const getBlockEvents = async (block: Block) => {
       address: contractAddressString,
       chunk_size: 10,
       from_block: { block_number: block.blockIndex },
-      to_block: { block_number: block.blockIndex },
+      to_block: block.hash === 'PENDING' ? 'pending': { block_number: block.blockIndex },
     //   from_block: { block_number: 925922},
     //   to_block: { block_number: 925922 },
       continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
