@@ -16,7 +16,7 @@ export class Event {
     @ManyToOne(() => Block, {onDelete: "CASCADE"})
     block!: Block;
 
-    @Column({type: "integer"})
+    @Column({type: "integer", nullable: true})
     blockIndex!: number;
 
     @Index({})
