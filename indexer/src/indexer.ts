@@ -173,7 +173,7 @@ const processNextBlock = async () => {
     }
 
     if(blockRecord){
-        blockRecord.blockIndex ??= lastSavedIndexNumber;
+        // blockRecord.blockIndex ??= lastSavedIndexNumber;
         const eventRecords = mapBlockEvents(receipts, blockRecord) || [];
         logger.info({
             blockHash: Number(blockRecord.hash),
@@ -195,8 +195,10 @@ const getBlockEvents = async (block: Block) => {
     const eventsRes: any = await starknet.getEvents({
       address: contractAddressString,
       chunk_size: 10,
+    //   from_block: { block_number: block.blockIndex },
+    //   to_block: block.hash === 'PENDING' ? 'pending': { block_number: block.blockIndex },
       from_block: { block_number: block.blockIndex },
-      to_block: block.hash === 'PENDING' ? 'pending': { block_number: block.blockIndex },
+      to_block: {block_number: block.blockIndex},
     //   from_block: { block_number: 925922},
     //   to_block: { block_number: 925922 },
       continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
