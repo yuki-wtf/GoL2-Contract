@@ -4,7 +4,7 @@ import { requiredEnv} from "./utils/envs";
 import { BlockIdentifier, GetBlockResponse, RpcProvider } from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
-import { deserializeEvent } from "./utils/events";
+import { parseEventContent } from "./utils/events";
 import { logger } from "./utils/logger";
 import { getLastSavedBlock } from "./utils/db";
 import { viewRefresher } from "./viewRefresher";
@@ -49,20 +49,6 @@ const mapBlock = (block: ReturnedBlock): Block => {
     return newBlock;
 }
 
-const mapEvents = (block: Block, tx: TransactionReceipt): Event[] =>
-tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventIndex) => {
-    const event = new Event();
-    event.txHash = tx.transaction_hash;
-    event.eventIndex = eventIndex;
-    event.txIndex = tx.transaction_index;
-    event.block = block;
-    event.blockIndex = block.blockIndex;
-    const [functName, ...initialData] = e.keys
-    const processed = deserializeEvent(functName, [...initialData, ...e.data]);
-    event.name = processed.name;
-    event.content = processed.value;
-    return event;
-})
 
 const eventNames: Record<string, string> = {
     'GameEvolved': 'game_evolved',
@@ -79,8 +65,7 @@ const mapBlockEvents = (events: any[], block: Block): Event[] =>
       event.block = block;
       event.blockIndex = e.block_number;
 
-      const [functName, ...initialData] = e.keys
-      const processed = deserializeEvent(functName, [...initialData, ...e.data]);
+      const processed = parseEventContent(e, block);
       if(processed){
           event.name = eventNames[processed.name] || processed.name;
           event.content = processed.value;
@@ -100,8 +85,6 @@ const getBlock = async <T>(blockIdentifier?: BlockIdentifier | undefined): Promi
 }
 const processNextBlock = async () => {
     const lastBlock = await getLastSavedBlock();
-    const lastBlockWithIndex = await getBlockWithLatestIndexNumber();
-    const lastSavedIndexNumber = lastBlockWithIndex? lastBlockWithIndex.blockIndex + 1 : processSince;
     const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
     let blockRecord: Block | undefined = undefined;
     let receipts: TransactionReceipt[] = [];
@@ -197,8 +180,10 @@ const getBlockEvents = async (block: Block) => {
       chunk_size: 10,
     //   from_block: { block_number: block.blockIndex },
     //   to_block: block.hash === 'PENDING' ? 'pending': { block_number: block.blockIndex },
-      from_block: { block_number: block.blockIndex },
-      to_block: {block_number: block.blockIndex},
+    from_block: { block_number: block.blockIndex },
+    to_block: {block_number: block.blockIndex},
+    //   from_block: { block_number: block.blockIndex },
+    //   to_block: {block_number: block.blockIndex},
     //   from_block: { block_number: 925922},
     //   to_block: { block_number: 925922 },
       continuation_token: continuationToken === 'initial' ? undefined : continuationToken,
