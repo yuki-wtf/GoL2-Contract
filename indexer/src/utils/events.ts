@@ -1,13 +1,14 @@
 import { selector } from 'starknet'
 import { abi } from "./const";
+import { deserializeOldEvent } from './events-old';
+import { Block } from '../entity/block';
 
 const { getSelectorFromName } = selector;
 
 type Field = { name: string, type: string };
 type StructsDefinition = Record<string, Field[]>;
 const structs = abi.filter(entry => entry.type === "struct").reduce<StructsDefinition>((acc, entry) => {
-    // @ts-ignore
-    acc[entry.name] = entry.data || entry.members!;
+    acc[entry.name] = entry.members!;
     return acc;
 }, {});
 
@@ -69,3 +70,53 @@ export const deserializeEvent = (key: string, data: string[]): DeserializedEvent
     const value = deserializeStruct(eventDefinition.fields || [], [...data]);
     return {name: eventDefinition.name, value}
 }
+
+export const parseEventContent = (
+    event: any,
+    block: Block
+  ): DeserializedEvent | undefined => {
+    let processed;
+    const [functName, ...initialData] = event.keys;
+    const upgradedBlockStart =
+      Number(process.env.UPGRADED_CONTRACT_BLOCK_START) ?? 0;
+  
+    if (block.blockIndex >= upgradedBlockStart) {
+      try {
+        processed = deserializeEvent(functName, [...initialData, ...event.data]);
+      } catch (e) {
+        console.debug(
+          "Could not parse event content with new parser. Trying old parser."
+        );
+      }
+  
+      if (!processed) {
+        try {
+          processed = deserializeOldEvent(functName, event.data);
+        } catch (e) {
+          console.debug("Could not parse event content with old parser.");
+        }
+      }
+    } else {
+      try {
+        processed = deserializeOldEvent(functName, event.data);
+      } catch (e) {
+        console.debug("Could not parse event content with old parser. Trying new parser.");
+      }
+  
+      if (!processed) {
+        try {
+          processed = deserializeEvent(functName, [
+            ...initialData,
+            ...event.data,
+          ]);
+        } catch (e) {
+          console.debug(
+            "Could not parse event content with new parser. Trying old parser."
+          );
+        }
+      }
+    }
+  
+    return processed;
+  };
+  
