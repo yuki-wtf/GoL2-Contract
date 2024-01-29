@@ -228,6 +228,12 @@ const updatePendingMints = async () => {
     const pendingMints = await AppDataSource.manager.find(
         Mints
     )
+    if(pendingMints.length === 0){
+        console.log("No pending mints")
+        return;
+    }else {
+        console.log("Found pending mints", pendingMints.length)
+    }
 
     for (let mint in pendingMints) {
         const mintDetail = pendingMints[mint];
