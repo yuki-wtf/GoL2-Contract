@@ -8,6 +8,7 @@ import { parseEventContent } from "./utils/events";
 import { logger } from "./utils/logger";
 import { getLastSavedBlock } from "./utils/db";
 import { viewRefresher } from "./viewRefresher";
+import { Mints } from "./entity/mints";
 
 type TransactionEvent = {
     from_address: string,
@@ -223,6 +224,42 @@ const updateTransactions = async () => {
     }
 }
 
+const updatePendingMints = async () => {
+    const pendingMints = await AppDataSource.manager.find(
+        Mints
+    )
+
+    for (let mint in pendingMints) {
+        const mintDetail = pendingMints[mint];
+        const tx = (await starknet.getTransactionStatus(
+            pendingMints[mint].txHash
+        ));
+        // @ts-ignore
+        if(tx.execution_status === "REJECTED" || tx.execution_status === "REVERTED"){
+            logger.info(
+                {
+                    transactionHash: mintDetail.txHash,
+                    status: tx.execution_status,
+                },
+                "Removing failed mint"
+            )
+            AppDataSource.manager.remove(mintDetail);
+        } else if(mintDetail.status !== tx.finality_status) {
+            logger.info(
+                {
+                    txHash: mintDetail.txHash,
+                    execution_status: tx.execution_status,
+                    finality_status: tx.finality_status,
+                },
+                "Updating mint status"
+            )
+            mintDetail.status = tx.finality_status;
+            await AppDataSource.manager.save(mintDetail);
+        }
+    }
+
+}
+
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const indexer = async () => {
     try {
@@ -230,6 +267,7 @@ export const indexer = async () => {
             await processNextBlock();
             await viewRefresher();
             await updateTransactions();
+            await updatePendingMints();
             await wait(3000);
         }
     } catch (e) {

@@ -135,3 +135,6 @@ dmypy.json
 
 # indexer modules
 node_modules/
+
+certificates 
+*.crt
