@@ -11,6 +11,7 @@ import { Infinite } from '../view/infinite';
 
 // Uncomment below in local development
 // import 'dotenv/config'
+import { Mints } from "../entity/mints";
 
 // We need to store bigints in jsonb column, typeorm doesn't support that.
 // Transformers in typeorm run _before_ typeorm's JSON.stringify run, so it is problematic
@@ -39,7 +40,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: false,
     logging: false,
-    entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite],
+    entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite, Mints],
     migrations: ["dist/migrations/*.js"],
     subscribers: [],
 });
