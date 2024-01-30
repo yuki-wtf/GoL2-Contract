@@ -1,0 +1,56 @@
+name: gol2 migration
+
+on:
+  push:
+    branches:
+      - 'update-starknet'
+  workflow_dispatch:
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: registry.digitalocean.com/governance/gol2-indexer
+          flavor: latest=false
+          tags: |
+            type=ref,suffix=-{{sha}},event=branch
+            type=ref,suffix=-{{sha}},event=pr
+
+      - name: Login to DO Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            "certificate=${{ secrets.CERTIFICATE }}"
+
+  Deploy-migration:
+    needs: Build
+    runs-on: ubuntu-latest
+    env:
+      tag: ${{ needs.Build.outputs.tag }}
+    steps:
+      - name: DigitalOcean App Platform deployment
+        uses: digitalocean/app_action@v1.1.5
+        with:
+          app_name: gol2-migration
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          images: '[{"name": "gol-2-indexer2","image":{"registry_type": "DOCR","repository": "gol2-indexer","tag": "${{ env.tag }}"}}]'
