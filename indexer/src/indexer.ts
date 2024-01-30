@@ -229,7 +229,7 @@ const updatePendingMints = async () => {
         Mints
     )
     if(pendingMints.length === 0){
-        console.log("No pending mints")
+        console.log("No pending mints found")
         return;
     }else {
         console.log("Found pending mints", pendingMints.length)
