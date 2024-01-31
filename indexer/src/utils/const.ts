@@ -2,7 +2,8 @@ export const HASH_LENGTH = 65;
 
 export const indexerApp = "indexer";
 export const viewRefresherApp = "viewRefresher";
-export const apps = [indexerApp, viewRefresherApp];
+export const generator = "generator";
+export const apps = [indexerApp, viewRefresherApp, generator];
 
 export const abi = [
   {

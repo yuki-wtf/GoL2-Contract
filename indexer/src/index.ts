@@ -3,7 +3,8 @@ import { logger } from "./utils/logger";
 import { appType } from "./utils/envs";
 import { indexer } from "./indexer";
 import { viewRefresher } from "./viewRefresher";
-import { indexerApp, viewRefresherApp } from "./utils/const";
+import { indexerApp, viewRefresherApp, generator } from "./utils/const";
+import { whitelistGenerator } from "./whitelistGenerator";
 
 logger.info("Starting.");
 
@@ -15,6 +16,8 @@ AppDataSource.initialize().then(async () => {
             await indexer()
         } else if (appType === viewRefresherApp) {
             await viewRefresher()
+        } else if(appType === generator) {
+            await whitelistGenerator();
         }
     } catch (e) {
         logger.error(e, "App failed.");
