@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'update-starknet'
+      - 'update-starknet-mainnet'
   workflow_dispatch:
 
 jobs:
@@ -41,16 +42,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           secrets: |
             "certificate=${{ secrets.CERTIFICATE }}"
-
-  Deploy-migration:
-    needs: Build
-    runs-on: ubuntu-latest
-    env:
-      tag: ${{ needs.Build.outputs.tag }}
-    steps:
-      - name: DigitalOcean App Platform deployment
-        uses: digitalocean/app_action@v1.1.5
-        with:
-          app_name: gol2-migration
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          images: '[{"name": "gol-2-indexer2","image":{"registry_type": "DOCR","repository": "gol2-indexer","tag": "${{ env.tag }}"}}]'
