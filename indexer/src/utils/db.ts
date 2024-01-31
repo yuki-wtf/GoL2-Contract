@@ -8,11 +8,12 @@ import { Transaction } from "../entity/transaction";
 import { Balance } from "../view/balance";
 import { Creator } from '../view/creator';
 import { Infinite } from '../view/infinite';
+import { Mints } from "../entity/mints";
+import { Whitelist } from "../entity/whitelist";
 import * as fs from 'fs';
 
 // Uncomment below in local development
-// import 'dotenv/config'
-import { Mints } from "../entity/mints";
+import 'dotenv/config'
 
 // We need to store bigints in jsonb column, typeorm doesn't support that.
 // Transformers in typeorm run _before_ typeorm's JSON.stringify run, so it is problematic
@@ -44,7 +45,7 @@ export const AppDataSource = new DataSource({
     },
     synchronize: false,
     logging: false,
-    entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite, Mints],
+    entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite, Mints, Whitelist],
     migrations: ["dist/migrations/*.js"],
     subscribers: [],
 });
