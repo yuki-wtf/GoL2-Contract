@@ -97,7 +97,7 @@ const mapBlockEvents = async (events: any[], block: Block): Promise<Event[]> => 
       event.eventIndex = eventIndex;
       event.txIndex = txIndex;
       event.block = block;
-      event.blockIndex = emittedEvent.blockIndex;
+      event.blockIndex = emittedEvent.block_number;
       event.name = eventNames[eventName] || eventName;
 
       event.content = eventContent;
@@ -118,6 +118,8 @@ const getBlock = async <T>(blockIdentifier?: BlockIdentifier | undefined): Promi
     }
 }
 const processNextBlock = async () => {
+    // const lastBlock = null as any;
+    // const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : 942969;
     const lastBlock = await getLastSavedBlock();
     const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
     let blockRecord: Block | undefined = undefined;
