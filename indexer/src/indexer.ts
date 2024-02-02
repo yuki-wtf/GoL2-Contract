@@ -31,7 +31,7 @@ const contractAddress = requiredEnv("CONTRACT_ADDRESS");
 function parseEvent(emittedEvent: EMITTED_EVENT): ParsedEvent {
   let parsedEvent: ParsedEvent | undefined = undefined;
 
-  if (emittedEvent.block_number >= OLD_CONTRACT_BLOCK_END) {
+  if (emittedEvent.block_number == null || emittedEvent.block_number >= OLD_CONTRACT_BLOCK_END) {
     parsedEvent = contract
       .parseEvents({
         events: [emittedEvent],
@@ -141,7 +141,7 @@ async function pullEvents() {
           }
         }
 
-        logger.info("Parsing event.", {
+        logger.debug("Parsing event.", {
           blockNumber: emittedEvent.block_number,
           transactionHash: emittedEvent.transaction_hash,
           OLD_CONTRACT_BLOCK_END,
