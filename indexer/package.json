@@ -22,6 +22,7 @@
   "scripts": {
     "build": "tsc --build",
     "start": "typeorm migration:run -d dist/utils/db.js && node dist/index.js $APP_TYPE",
+    "dev": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
     "dev:indexer": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
     "dev:viewRefresher": "APP_TYPE=viewRefresher nodemon src/index.ts | bunyan",
     "dev:generator": "APP_TYPE=generator nodemon src/index.ts | bunyan",

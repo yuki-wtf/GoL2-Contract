@@ -1,9 +1,9 @@
-import { contractOldAbiPromise, contractPromise } from "./contract";
-import { requiredEnv } from "./envs";
+// import { contractOldAbiPromise, contractPromise } from "./contract";
+// import { requiredEnv } from "./envs";
 
 const uint256Shift = BigInt("0x100000000000000000000000000000000");
 
-const OLD_CONTRACT_BLOCK_END = requiredEnv("OLD_CONTRACT_BLOCK_END");
+// const OLD_CONTRACT_BLOCK_END = requiredEnv("OLD_CONTRACT_BLOCK_END");
 
 const isObject = (value: any): boolean => {
     return Object.prototype.toString.call(value) === '[object Object]'
@@ -28,45 +28,45 @@ export const deserializeContent = (parsedEvent: any): any => {
     return eventContent;
 };
 
-export const getParsedEvent = async (emittedEvent: any) => {
-    const contractWithNewAbi = await contractPromise;
-    const contractWithOldAbi = await contractOldAbiPromise;
-    let parsedEvent: any = null;
-    let failed = 0
-    let parser = 'new'
+// export const getParsedEvent = async (emittedEvent: any) => {
+//     const contractWithNewAbi = await contractPromise;
+//     const contractWithOldAbi = await contractOldAbiPromise;
+//     let parsedEvent: any = null;
+//     let failed = 0
+//     let parser = 'new'
     
-    if(OLD_CONTRACT_BLOCK_END && emittedEvent.block_number <= OLD_CONTRACT_BLOCK_END){
-      parser = 'old'
-    }
+//     if(OLD_CONTRACT_BLOCK_END && emittedEvent.block_number <= OLD_CONTRACT_BLOCK_END){
+//       parser = 'old'
+//     }
   
-    try {
-      const contract = parser === 'new' ? contractWithNewAbi : contractWithOldAbi
-      const [ParsedEvent] = contract.parseEvents({
-        events: [emittedEvent],
-      } as any);
-      parsedEvent = ParsedEvent;
-    } catch (e) {
-      failed++;
-      console.log(`Could not parse with ${parser} contract`, e);
-    }
+//     try {
+//       const contract = parser === 'new' ? contractWithNewAbi : contractWithOldAbi
+//       const [ParsedEvent] = contract.parseEvents({
+//         events: [emittedEvent],
+//       } as any);
+//       parsedEvent = ParsedEvent;
+//     } catch (e) {
+//       failed++;
+//       console.log(`Could not parse with ${parser} contract`, e);
+//     }
   
-    if (!parsedEvent || parsedEvent?.length === 0) {
-      const fallbackContract = parser === 'new' ? contractWithOldAbi : contractWithNewAbi
-      try {
-        const [ParsedEvent] = fallbackContract.parseEvents({
-          events: [emittedEvent],
-        } as any);
-          parsedEvent = ParsedEvent;
-      } catch (e) {
-        failed++;
-        console.log("Could not parse with fallback contract", e);
-      }
-    }
+//     if (!parsedEvent || parsedEvent?.length === 0) {
+//       const fallbackContract = parser === 'new' ? contractWithOldAbi : contractWithNewAbi
+//       try {
+//         const [ParsedEvent] = fallbackContract.parseEvents({
+//           events: [emittedEvent],
+//         } as any);
+//           parsedEvent = ParsedEvent;
+//       } catch (e) {
+//         failed++;
+//         console.log("Could not parse with fallback contract", e);
+//       }
+//     }
   
-    if(failed === 2){
-        console.error("Failed to parse event in both parsers", emittedEvent)
-    }
+//     if(failed === 2){
+//         console.error("Failed to parse event in both parsers", emittedEvent)
+//     }
   
-    return parsedEvent
-  }
+//     return parsedEvent
+//   }
   
