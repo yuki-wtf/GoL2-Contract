@@ -35,7 +35,7 @@ const deserializeValue = (type: string, values: string[]): any => {
         return;
     }
 
-    if (type === "felt252" || type === "ContractAddress") {
+    if (type === "felt252" || type === "ContractAddress" || type === "u128" || type === "u32" || type === "u64") {
         const [value] = values.splice(0, 1);
         return BigInt(value);
     }
@@ -111,7 +111,7 @@ export const parseEventContent = (
           ]);
         } catch (e) {
           console.debug(
-            "Could not parse event content with new parser. Trying old parser."
+            "Could not parse event content with new parser"
           );
         }
       }
