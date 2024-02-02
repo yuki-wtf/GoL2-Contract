@@ -3,7 +3,6 @@ import { requiredEnv } from "./utils/envs";
 import {
   GetTransactionReceiptResponse,
   ParsedEvent,
-  ParsedEvents,
 } from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
@@ -18,6 +17,7 @@ import {
 } from "./utils/contract";
 import { IsNull, Not } from "typeorm";
 import assert from "assert";
+import { eventNameMap } from "./utils/const";
 
 type ReturnedTransactionStatus = {
   tx_status: string;
@@ -30,19 +30,31 @@ const contractAddress = requiredEnv("CONTRACT_ADDRESS");
 
 function parseEvent(emittedEvent: EMITTED_EVENT): ParsedEvent {
   let parsedEvent: ParsedEvent | undefined = undefined;
+  const shouldUseNewContract = emittedEvent.block_number == null || emittedEvent.block_number > OLD_CONTRACT_BLOCK_END;
 
-  if (emittedEvent.block_number == null || emittedEvent.block_number >= OLD_CONTRACT_BLOCK_END) {
-    parsedEvent = contract
+  try {
+    const parsingContract = shouldUseNewContract ? contract : oldContract;
+    parsedEvent = parsingContract
       .parseEvents({
         events: [emittedEvent],
       } as GetTransactionReceiptResponse)
       .at(0);
-  } else {
-    parsedEvent = oldContract
-      .parseEvents({
-        events: [emittedEvent],
-      } as GetTransactionReceiptResponse)
-      .at(0);
+  } catch (e) {
+    console.error("Error parsing event with default parser", e);
+  }
+  
+  if (parsedEvent == undefined) {
+    console.debug("Parsing with fallback parser");
+    const parsingContract = shouldUseNewContract ? oldContract : contract;
+    try {
+      parsedEvent = parsingContract
+        .parseEvents({
+          events: [emittedEvent],
+        } as GetTransactionReceiptResponse)
+        .at(0);
+    } catch (e) {
+      console.error("Error parsing event with fallback parser", e);
+    }
   }
 
   assert(parsedEvent != null, "Parsed event is null.");
@@ -177,12 +189,6 @@ async function pullEvents() {
     await refreshMaterializedViews();
   }
 }
-
-const eventNameMap = {
-  GameCreated: "game_created",
-  GameEvolved: "game_evolved",
-  CellRevived: "cell_revived",
-} as { [key: string]: string };
 
 type MaterializedViewName = "balance" | "creator" | "infinite";
 
