@@ -1,14 +1,15 @@
-import { AppDataSource, getBlockWithLatestIndexNumber } from "./utils/db";
+import { AppDataSource } from "./utils/db";
 import { Block } from "./entity/block";
 import { requiredEnv} from "./utils/envs";
-import { BlockIdentifier, GetBlockResponse, RpcProvider } from "starknet";
+import { BlockIdentifier, GetBlockResponse} from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
-import { parseEventContent } from "./utils/events";
 import { logger } from "./utils/logger";
 import { getLastSavedBlock } from "./utils/db";
 import { viewRefresher } from "./viewRefresher";
 import { Mints } from "./entity/mints";
+import { provider } from "./utils/contract";
+import { deserializeContent, getParsedEvent } from "./utils/parser";
 
 type TransactionEvent = {
     from_address: string,
@@ -32,13 +33,7 @@ type ReturnedTransactionStatus = {
 }
 
 const processSince = parseInt(requiredEnv("PROCESS_SINCE"));
-const contractAddressString = requiredEnv("CONTRACT_ADDRESS");
-const contractAddress = BigInt(requiredEnv("CONTRACT_ADDRESS"));
-// const useMainnet = toBool(requiredEnv("USE_MAINNET"));
-const starknet = new RpcProvider({
-  nodeUrl: process.env.RPC_NODE_URL,
-//   nodeUrl: "https://free-rpc.nethermind.io/goerli-juno",
-});
+const contractAddress = requiredEnv("CONTRACT_ADDRESS");
 
 const mapBlock = (block: ReturnedBlock): Block => {
     const newBlock = new Block();
@@ -56,28 +51,66 @@ const eventNames: Record<string, string> = {
     'GameCreated': 'game_created',
     'CellRevived': 'cell_revived',
 }
-const mapBlockEvents = (events: any[], block: Block): Event[] =>
-  events
-    .map((e, eventIndex) => {
-      const event = new Event();
-      event.txHash = e.transaction_hash;
-      event.eventIndex = eventIndex;
-      event.txIndex = eventIndex;
-      event.block = block;
-      event.blockIndex = e.block_number;
 
-      const processed = parseEventContent(e, block);
-      if(processed){
-          event.name = eventNames[processed.name] || processed.name;
-          event.content = processed.value;
+const mapBlockEvents = async (events: any[], block: Block): Promise<Event[]> => {
+    const values: any[] = [];
+    let blockHash: string | null = null;
+    let txHash: string | null = null;
+    let txIndex = 0;
+    let eventIndex = 0;
+  
+    for (const emittedEvent of events.values()) {
+      if (emittedEvent.block_hash !== blockHash) {
+        blockHash = emittedEvent.block_hash;
+        txHash = emittedEvent.transaction_hash;
+        txIndex = 0;
+        eventIndex = 0;
+      } else {
+        if (emittedEvent.transaction_hash !== txHash) {
+          txHash = emittedEvent.transaction_hash;
+          txIndex++;
+        } else {
+          eventIndex++;
+        }
       }
+  
+      console.debug("Parsing event.", {
+        blockNumber: emittedEvent.block_number,
+        transactionHash: emittedEvent.transaction_hash,
+      });
+  
+      const parsedEvent = await getParsedEvent(emittedEvent)
+      if (!parsedEvent) {
+        continue;
+      }
+  
+      const [eventName] = Object.keys(parsedEvent);
+      const eventContent = deserializeContent(parsedEvent[eventName]);
 
-      return event;
-});
+      if('from' in eventContent){
+          eventContent.from_ = eventContent.from
+          delete eventContent.from
+      }
+  
+      const event = new Event();
+      event.txHash = emittedEvent.transaction_hash;
+      event.eventIndex = eventIndex;
+      event.txIndex = txIndex;
+      event.block = block;
+      event.blockIndex = emittedEvent.blockIndex;
+      event.name = eventNames[eventName] || eventName;
 
+      event.content = eventContent;
+  
+      values.push(event);
+    }
+  
+    return values;
+  };
+  
 const getBlock = async <T>(blockIdentifier?: BlockIdentifier | undefined): Promise<T | undefined> => {
     try {
-        const block = await starknet.getBlockWithTxHashes(blockIdentifier);
+        const block = await provider.getBlockWithTxHashes(blockIdentifier);
         return block as unknown as T
     } catch (e) {
         console.log("Block not found", blockIdentifier)
@@ -158,7 +191,8 @@ const processNextBlock = async () => {
 
     if(blockRecord){
         // blockRecord.blockIndex ??= lastSavedIndexNumber;
-        const eventRecords = mapBlockEvents(receipts, blockRecord) || [];
+        // const eventRecordsOld = mapBlockEvents(receipts, blockRecord) || [];
+        const eventRecords = await mapBlockEvents(receipts, blockRecord) || [];
         logger.info({
             blockHash: Number(blockRecord.hash),
             blockIndex: Number(blockRecord.blockIndex),
@@ -176,13 +210,13 @@ const getBlockEvents = async (block: Block) => {
   let continuationToken: string | undefined = 'initial';
   let allEvents: any[] = []
   while (continuationToken) {
-    const eventsRes: any = await starknet.getEvents({
-      address: contractAddressString,
+    const eventsRes: any = await provider.getEvents({
+      address: contractAddress,
       chunk_size: 10,
-    //   from_block: { block_number: block.blockIndex },
-    //   to_block: block.hash === 'PENDING' ? 'pending': { block_number: block.blockIndex },
-    from_block: { block_number: block.blockIndex },
-    to_block: {block_number: block.blockIndex},
+      // from_block: { block_number: block.blockIndex },
+      // to_block: block.hash === 'PENDING' ? 'pending': { block_number: block.blockIndex },
+      from_block: { block_number: block.blockIndex },
+      to_block: {block_number: block.blockIndex},
     //   from_block: { block_number: block.blockIndex },
     //   to_block: {block_number: block.blockIndex},
     //   from_block: { block_number: 925922},
@@ -208,7 +242,7 @@ const updateTransactions = async () => {
         }
         )
     for (let transaction in transactionsToUpdate) {
-        const tx = (await starknet.getTransactionStatus(
+        const tx = (await provider.getTransactionStatus(
           transactionsToUpdate[transaction].hash
         )) as any as ReturnedTransactionStatus;
         transactionsToUpdate[transaction].blockHash = tx.block_hash;
@@ -237,7 +271,7 @@ const updatePendingMints = async () => {
 
     for (let mint in pendingMints) {
         const mintDetail = pendingMints[mint];
-        const tx = (await starknet.getTransactionStatus(
+        const tx = (await provider.getTransactionStatus(
             pendingMints[mint].txHash
         ));
         // @ts-ignore
