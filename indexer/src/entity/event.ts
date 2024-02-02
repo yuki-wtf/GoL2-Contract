@@ -13,7 +13,7 @@ export class Event {
     @Column({type: "integer"})
     txIndex!: number;
 
-    @Column({length: HASH_LENGTH})
+    @Column({length: HASH_LENGTH, nullable: true})
     blockHash!: string;
 
     @Column({type: "integer", nullable: true})
