@@ -135,8 +135,8 @@ async function pullEvents() {
 
       let blockHash: string | null = null;
       let txHash: string | null = null;
-      let txIndex = 0;
-      let eventIndex = 0;
+      let txIndex = -1;
+      let eventIndex = -1;
 
       for (const emittedEvent of eventsChunk.events.values()) {
         if (emittedEvent.block_hash !== blockHash) {
@@ -148,6 +148,7 @@ async function pullEvents() {
           if (emittedEvent.transaction_hash !== txHash) {
             txHash = emittedEvent.transaction_hash;
             txIndex++;
+            eventIndex = 0;
           } else {
             eventIndex++;
           }
