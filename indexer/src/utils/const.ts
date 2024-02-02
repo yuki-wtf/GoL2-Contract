@@ -4,6 +4,11 @@ export const indexerApp = "indexer";
 export const viewRefresherApp = "viewRefresher";
 export const generator = "generator";
 export const apps = [indexerApp, viewRefresherApp, generator];
+export const eventNameMap = {
+  GameCreated: "game_created",
+  GameEvolved: "game_evolved",
+  CellRevived: "cell_revived",
+} as { [key: string]: string };
 
 export const abi = [
   {
