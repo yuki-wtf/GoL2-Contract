@@ -13,7 +13,7 @@ import { Whitelist } from "../entity/whitelist";
 import * as fs from 'fs';
 
 // Uncomment below in local development
-// import 'dotenv/config'
+import 'dotenv/config'
 
 // We need to store bigints in jsonb column, typeorm doesn't support that.
 // Transformers in typeorm run _before_ typeorm's JSON.stringify run, so it is problematic
@@ -40,9 +40,9 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
-    ssl: {
-        ca: fs.readFileSync("ca-certificate.crt").toString(),
-    },
+    ssl: fs.existsSync("ca-certificate.crt")
+        ? { ca: fs.readFileSync("ca-certificate.crt").toString() }
+        : undefined,
     synchronize: false,
     logging: false,
     entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite, Mints, Whitelist],

@@ -13,8 +13,8 @@ export class Event {
     @Column({type: "integer"})
     txIndex!: number;
 
-    @ManyToOne(() => Block, {onDelete: "CASCADE"})
-    block!: Block;
+    @Column({length: HASH_LENGTH})
+    blockHash!: string;
 
     @Column({type: "integer", nullable: true})
     blockIndex!: number;
