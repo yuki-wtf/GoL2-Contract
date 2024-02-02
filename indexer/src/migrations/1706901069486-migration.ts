@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class migration1706881078134 implements MigrationInterface {
-    name = 'migration1706881078134'
+export class migration1706901069486 implements MigrationInterface {
+    name = 'migration1706901069486'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`DELETE FROM "typeorm_metadata" WHERE "type" = $1 AND "name" = $2 AND "schema" = $3`, ["MATERIALIZED_VIEW","infinite","public"]);
@@ -9,7 +9,6 @@ export class migration1706881078134 implements MigrationInterface {
         await queryRunner.query(`DELETE FROM "typeorm_metadata" WHERE "type" = $1 AND "name" = $2 AND "schema" = $3`, ["MATERIALIZED_VIEW","creator","public"]);
         await queryRunner.query(`DROP MATERIALIZED VIEW "creator"`);
         await queryRunner.query(`ALTER TABLE "event" DROP CONSTRAINT "FK_55151d22981cfae04b8ea74fe78"`);
-        await queryRunner.query(`ALTER TABLE "event" ALTER COLUMN "blockHash" SET NOT NULL`);
         await queryRunner.query(`CREATE MATERIALIZED VIEW "creator" AS 
         select event."txHash"                                    "transactionHash",
                event."name"                                      "transactionType",
@@ -99,7 +98,6 @@ export class migration1706881078134 implements MigrationInterface {
         await queryRunner.query(`DROP MATERIALIZED VIEW "infinite"`);
         await queryRunner.query(`DELETE FROM "typeorm_metadata" WHERE "type" = $1 AND "name" = $2 AND "schema" = $3`, ["MATERIALIZED_VIEW","creator","public"]);
         await queryRunner.query(`DROP MATERIALIZED VIEW "creator"`);
-        await queryRunner.query(`ALTER TABLE "event" ALTER COLUMN "blockHash" DROP NOT NULL`);
         await queryRunner.query(`ALTER TABLE "event" ADD CONSTRAINT "FK_55151d22981cfae04b8ea74fe78" FOREIGN KEY ("blockHash") REFERENCES "block"("hash") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`CREATE MATERIALIZED VIEW "creator" AS select event."txHash"                                    "transactionHash",
                event."name"                                      "transactionType",
