@@ -1,6 +1,8 @@
 import { contractOldAbiPromise, contractPromise } from "./contract";
 import { requiredEnv } from "./envs";
 
+const uint256Shift = BigInt("0x100000000000000000000000000000000");
+
 const OLD_CONTRACT_BLOCK_END = requiredEnv("OLD_CONTRACT_BLOCK_END");
 
 const isObject = (value: any): boolean => {
