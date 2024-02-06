@@ -13,27 +13,34 @@ jobs:
       tag: ${{ steps.meta.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
-          images: registry.digitalocean.com/governance/gol2-indexer
+          images: europe-west9-docker.pkg.dev/gol2-development/gol2-indexer/dev
           flavor: latest=false
           tags: |
             type=ref,suffix=-{{sha}},event=branch
             type=ref,suffix=-{{sha}},event=pr
 
-      - name: Login to DO Container Registry
-        uses: docker/login-action@v2
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
         with:
-          registry: registry.digitalocean.com
-          username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          token_format: access_token
+          project_id: 'gol2-development'
+          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+      - name: Login to GAR
+        uses: docker/login-action@v3
+        with:
+          registry: europe-west9-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           file: Dockerfile
           push: true
@@ -41,31 +48,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           secrets: |
             "certificate=${{ secrets.CERTIFICATE }}"
-
-  Deploy-review:
-    if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
-    needs: Build
-    runs-on: ubuntu-latest
-    env:
-      tag: ${{ needs.Build.outputs.tag }}
-    steps:
-      - name: DigitalOcean App Platform deployment
-        uses: digitalocean/app_action@v1.1.5
-        with:
-          app_name: gol2-review
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          images: '[{"name": "gol2-indexer","image":{"registry_type": "DOCR","repository": "gol2-indexer","tag": "${{ env.tag }}"}}]'
-
-  Deploy-production:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: Build
-    runs-on: ubuntu-latest
-    env:
-      tag: ${{ needs.Build.outputs.tag }}
-    steps:
-      - name: DigitalOcean App Platform deployment
-        uses: digitalocean/app_action@v1.1.5
-        with:
-          app_name: gol2
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          images: '[{"name": "gol2-indexer","image":{"registry_type": "DOCR","repository": "gol2-indexer","tag": "${{ env.tag }}"}}]'
