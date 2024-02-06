@@ -1,29 +1,50 @@
-name: ci
+name: gol2
 
 on:
   push:
     branches:
       - 'main'
+  workflow_dispatch:
 
 jobs:
-  docker:
+  Build:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.version }}
     steps:
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push
-        uses: docker/build-push-action@v3
+          images: europe-west9-docker.pkg.dev/gol2-development/gol2-indexer/dev
+          flavor: latest=false
+          tags: |
+            type=ref,suffix=-{{sha}},event=branch
+            type=ref,suffix=-{{sha}},event=pr
+
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
         with:
+          token_format: access_token
+          project_id: 'gol2-development'
+          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
+      - name: Login to GAR
+        uses: docker/login-action@v3
+        with:
+          registry: europe-west9-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          file: Dockerfile
           push: true
-          tags: yukilabs/gol2-indexer:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            "certificate=${{ secrets.CERTIFICATE }}"
