@@ -8,7 +8,6 @@ import { Transaction } from "../entity/transaction";
 import { Balance } from "../view/balance";
 import { Creator } from '../view/creator';
 import { Infinite } from '../view/infinite';
-import * as fs from 'fs';
 
 // We need to store bigints in jsonb column, typeorm doesn't support that.
 // Transformers in typeorm run _before_ typeorm's JSON.stringify run, so it is problematic
@@ -34,9 +33,6 @@ export const AppDataSource = new DataSource({
     username: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
-    ssl: {
-        ca: fs.readFileSync("ca-certificate.crt").toString(),
-    },
     synchronize: false,
     logging: false,
     entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite],
