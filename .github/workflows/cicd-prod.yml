@@ -19,7 +19,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: europe-west9-docker.pkg.dev/gol2-development/gol2-indexer/dev
+          images: europe-west9-docker.pkg.dev/gol2-production/gol2-indexer/dev
           flavor: latest=false
           tags: |
             type=ref,event=tag
