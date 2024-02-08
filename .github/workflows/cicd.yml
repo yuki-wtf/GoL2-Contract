@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 env:
   GAR: europe-west9-docker.pkg.dev
-  Project: gol2
+  Project: gol2-indexer
   GCP_Project_ID: ${{ startsWith(github.event.ref, 'refs/tags/v') && 'gol2-production' || 'gol2-development' }}
 jobs:
   Build:
