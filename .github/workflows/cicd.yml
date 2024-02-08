@@ -30,7 +30,7 @@ jobs:
           images: ${{ env.GAR }}/${{ env.GCP_Project_ID }}/${{ env.Project }}/${{ github.head_ref && 'feature' || github.ref_name }}
           flavor: latest=false
           tags: |
-            type=ref,suffix=-{{sha}},event=branch
+            type=sha,suffix=-{{sha}},event=branch
             type=ref,suffix=-{{sha}},event=pr
             type=ref,event=tag
 
