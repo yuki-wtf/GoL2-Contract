@@ -1,10 +1,12 @@
 import fs from 'fs/promises'
-import { Whitelist } from "./entity/whitelist";
-import { AppDataSource } from './utils/db';
+import { Whitelist } from "../entity/whitelist";
+import { AppDataSource } from './db';
 import { exit } from 'process';
 
-export const whitelistGenerator = async () => {
-  console.log("Starting whitelist generator.");
+const filename = "whitelist.json";
+
+export const saveWhitelistProofsFromFileToDB = async () => {
+  console.log(`Retrieving whitelist proofs from "${filename}" file.`);
   const dataRaw = await fs.readFile("whitelist.json", "utf8");
   const data = JSON.parse(dataRaw);
  

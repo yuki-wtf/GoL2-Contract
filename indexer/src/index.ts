@@ -4,8 +4,7 @@ import { appType } from "./utils/envs";
 import { indexer } from "./indexer";
 import { viewRefresher } from "./viewRefresher";
 import { indexerApp, viewRefresherApp, generator } from "./utils/const";
-import { whitelistGenerator } from "./whitelistGenerator";
-
+import { generateWhitelistMintGenerations } from "./utils/generateWhitelistMintGenerations";
 logger.info("Starting.");
 
 AppDataSource.initialize().then(async () => {
@@ -17,7 +16,7 @@ AppDataSource.initialize().then(async () => {
         } else if (appType === viewRefresherApp) {
             await viewRefresher()
         } else if(appType === generator) {
-            await whitelistGenerator();
+            await generateWhitelistMintGenerations();
         }
     } catch (e) {
         logger.error(e, "App failed.");
