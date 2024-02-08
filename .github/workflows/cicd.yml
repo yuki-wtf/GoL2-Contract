@@ -55,9 +55,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-
-
-
-          # europe-west9-docker.pkg.dev/gol2-production/gol2-indexer/dev:v0.0.2
-          # europe-west9-docker.pkg.dev/gol2-production/gol2-indexer/v0.0.3:sha-2bd00ab
