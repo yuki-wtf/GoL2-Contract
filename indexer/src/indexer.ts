@@ -18,6 +18,7 @@ import {
 import { IsNull, Not } from "typeorm";
 import assert from "assert";
 import { eventNameMap } from "./utils/const";
+import { checkWhitelistProofs } from "./utils/checkWhitelistProofs";
 // import { saveWhitelistProofsFromFileToDB } from "./utils/saveWhitelistProofsFromFileToDB";
 
 type ReturnedTransactionStatus = {
@@ -275,7 +276,7 @@ const updatePendingMints = async () => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const indexer = async () => {
-  // saveWhitelistProofsFromFileToDB();
+  await checkWhitelistProofs();
   try {
     while (true) {
       await pullEvents();
