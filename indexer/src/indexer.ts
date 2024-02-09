@@ -276,7 +276,7 @@ const updatePendingMints = async () => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const indexer = async () => {
-  await checkWhitelistProofs();
+  // await checkWhitelistProofs();
   try {
     while (true) {
       await pullEvents();
