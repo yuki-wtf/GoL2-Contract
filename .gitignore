@@ -138,3 +138,5 @@ node_modules/
 
 certificates 
 *.crt
+
+*/whitelist/*.json

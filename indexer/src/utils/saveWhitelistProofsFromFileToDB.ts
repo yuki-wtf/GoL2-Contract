@@ -3,11 +3,9 @@ import { Whitelist } from "../entity/whitelist";
 import { AppDataSource } from './db';
 import { exit } from 'process';
 
-const filename = "whitelist.json";
-
-export const saveWhitelistProofsFromFileToDB = async () => {
+export const saveWhitelistProofsFromFileToDB = async (filename:string) => {
   console.log(`Retrieving whitelist proofs from "${filename}" file.`);
-  const dataRaw = await fs.readFile("whitelist.json", "utf8");
+  const dataRaw = await fs.readFile(filename, "utf8");
   const data = JSON.parse(dataRaw);
  
   const whitelist = [];
@@ -24,7 +22,6 @@ export const saveWhitelistProofsFromFileToDB = async () => {
     }
     await AppDataSource.manager.save(whitelist);
     console.log("Data inserted successfully.");
-    exit(0);
   } catch (err) {
     console.error("Error inserting data", err);
     exit(1);

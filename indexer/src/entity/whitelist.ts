@@ -6,7 +6,7 @@ export class Whitelist {
     @PrimaryColumn({type: "integer", unique: true})
     generation!: number;
 
-    @Column()
+    @Column({type: 'text'})
     proof!: string;
     
     @CreateDateColumn()
