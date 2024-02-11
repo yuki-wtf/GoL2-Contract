@@ -9,6 +9,12 @@ export class Whitelist {
     @Column({type: 'text'})
     proof!: string;
     
+    @Column()
+    timestamp!: number;
+
+    @Column()
+    gameState!: string;
+    
     @CreateDateColumn()
     createdAt!: Date;
 }
