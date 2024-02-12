@@ -209,23 +209,39 @@ async function refreshMaterializedViews() {
 }
 
 const updateTransactions = async () => {
-  const transactionsToUpdate = await AppDataSource.manager.find(Transaction, {
-    where: [
-      { status: "NOT_RECEIVED" },
-      { status: "RECEIVED" },
-      { status: "PENDING" },
-      // { status: "ACCEPTED_ON_L2" },
-    ],
-  });
+  const deletedTransactions = await AppDataSource.manager.query(`
+    DELETE
+    FROM TRANSACTION t
+    WHERE
+        (SELECT 'txHash'
+          FROM event e
+          WHERE e."txHash" = t.hash 
+          limit 1
+          ) IS NOT NULL
+        OR
+        (t.status = 'REJECTED' AND t."createdAt" < (now() - interval '15 minutes'))
+    returning hash;
+  `)
+
+  if(deletedTransactions?.[0]?.length > 0){
+    logger.info(
+      deletedTransactions[0].map((t: any) => t.hash),
+      "Deleting transaction."
+    );
+  }
+  
+  const transactionsToUpdate = await AppDataSource.manager.find(Transaction);
+
   for (let transaction in transactionsToUpdate) {
     const tx = (await provider.getTransactionStatus(
       transactionsToUpdate[transaction].hash
-    )) as any as ReturnedTransactionStatus;
-    transactionsToUpdate[transaction].blockHash = tx.block_hash;
-    // @ts-ignore
+    ));
+
     transactionsToUpdate[transaction].status = tx.finality_status;
+    if(tx.execution_status === 'REVERTED'){
+      transactionsToUpdate[transaction].status = 'REJECTED';
+    }
     transactionsToUpdate[transaction].updatedAt = new Date();
-    transactionsToUpdate[transaction].errorContent = tx.tx_failure_reason;
     logger.info(
       {
         transactionHash: Number(transactionsToUpdate[transaction].hash),
