@@ -219,7 +219,7 @@ const updateTransactions = async () => {
           limit 1
           ) IS NOT NULL
         OR
-        (t.status = 'REJECTED' AND t."createdAt" < (now() - interval '15 minutes'))
+        t."createdAt" < (now() - interval '15 minutes')
     returning hash;
   `)
 
@@ -290,7 +290,7 @@ const updatePendingMints = async () => {
   }
 };
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const indexer = async () => {
   await checkWhitelistProofs();
   try {
@@ -299,7 +299,6 @@ export const indexer = async () => {
       await viewRefresher();
       await updateTransactions();
       await updatePendingMints();
-      await wait(3000);
     }
   } catch (e) {
     if (e instanceof Error && e.message.includes("BLOCK_NOT_FOUND")) {
