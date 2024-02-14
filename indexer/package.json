@@ -8,8 +8,9 @@
   "dependencies": {
     "@types/node": "^17.0.25",
     "bunyan": "^1.8.15",
+    "dotenv": "^16.3.1",
     "pg": "^8.7.3",
-    "starknet": "^3.9.0",
+    "starknet": "^5.24.5",
     "typeorm": "^0.3.6"
   },
   "devDependencies": {
@@ -21,8 +22,10 @@
   "scripts": {
     "build": "tsc --build",
     "start": "typeorm migration:run -d dist/utils/db.js && node dist/index.js $APP_TYPE",
+    "dev": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
     "dev:indexer": "APP_TYPE=indexer nodemon src/index.ts | bunyan",
     "dev:viewRefresher": "APP_TYPE=viewRefresher nodemon src/index.ts | bunyan",
+    "dev:generator": "APP_TYPE=generator nodemon src/index.ts | bunyan",
     "migration:before": "rm -fr dist && tsc",
     "migration:generate": "yarn migration:before && typeorm migration:generate -d dist/utils/db.js src/migrations/migration",
     "migration:run": "yarn migration:before && typeorm migration:run -d dist/utils/db.js"

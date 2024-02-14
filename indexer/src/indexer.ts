@@ -1,188 +1,317 @@
 import { AppDataSource } from "./utils/db";
-import { Block } from "./entity/block";
-import { requiredEnv, toBool } from "./utils/envs";
-import { GetBlockResponse, Provider } from "starknet";
+import { requiredEnv } from "./utils/envs";
+import {
+  GetTransactionReceiptResponse,
+  ParsedEvent,
+} from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
-import { deserializeEvent } from "./utils/events";
 import { logger } from "./utils/logger";
-import { getLastSavedBlock } from "./utils/db";
 import { viewRefresher } from "./viewRefresher";
-
-type TransactionEvent = {
-    from_address: string,
-    keys: [string],
-    data: string[],
-}
-type TransactionReceipt = {
-    transaction_index: number,
-    transaction_hash: string,
-    events: TransactionEvent[],
-}
-// Fix starknet.js types
-type ReturnedBlock = Omit<GetBlockResponse, "previous_block_hash"> & {
-    transaction_receipts: TransactionReceipt[];
-    parent_block_hash: string;
-}
+import { Mints } from "./entity/mints";
+import {
+  OLD_CONTRACT_BLOCK_END,
+  contract,
+  oldContract,
+  provider,
+} from "./utils/contract";
+import { IsNull, Not } from "typeorm";
+import assert from "assert";
+import { eventNameMap } from "./utils/const";
+import { checkWhitelistProofs } from "./utils/checkWhitelistProofs";
+// import { saveWhitelistProofsFromFileToDB } from "./utils/saveWhitelistProofsFromFileToDB";
 
 type ReturnedTransactionStatus = {
-    tx_status: string,
-    block_hash: string,
-    tx_failure_reason: string[],
-}
+  tx_status: string;
+  block_hash: string;
+  tx_failure_reason: string[];
+};
 
 const processSince = parseInt(requiredEnv("PROCESS_SINCE"));
-const contractAddress = BigInt(requiredEnv("CONTRACT_ADDRESS"));
-const useMainnet = toBool(requiredEnv("USE_MAINNET"));
-const starknet = new Provider({network: useMainnet ? "mainnet-alpha" : "goerli-alpha" });
+const contractAddress = requiredEnv("CONTRACT_ADDRESS");
 
-const mapBlock = (block: ReturnedBlock): Block => {
-    const newBlock = new Block();
-    newBlock.hash = block.block_hash;
-    newBlock.blockIndex = block.block_number;
-    newBlock.parentBlock = block.parent_block_hash;
-    newBlock.timestamp = new Date(Number(block.timestamp) * 1000);
-    newBlock.status = block.status;
-    return newBlock;
+function parseEvent(emittedEvent: EMITTED_EVENT): ParsedEvent {
+  let parsedEvent: ParsedEvent | undefined = undefined;
+  const shouldUseNewContract = emittedEvent.block_number == null || emittedEvent.block_number > OLD_CONTRACT_BLOCK_END;
+
+  try {
+    const parsingContract = shouldUseNewContract ? contract : oldContract;
+    parsedEvent = parsingContract
+      .parseEvents({
+        events: [emittedEvent],
+      } as GetTransactionReceiptResponse)
+      .at(0);
+  } catch (e) {
+    console.error("Error parsing event with default parser", e);
+  }
+  
+  if (parsedEvent == undefined) {
+    console.debug("Parsing with fallback parser");
+    const parsingContract = shouldUseNewContract ? oldContract : contract;
+    try {
+      parsedEvent = parsingContract
+        .parseEvents({
+          events: [emittedEvent],
+        } as GetTransactionReceiptResponse)
+        .at(0);
+    } catch (e) {
+      console.error("Error parsing event with fallback parser", e);
+    }
+  }
+
+  assert(parsedEvent != null, "Parsed event is null.");
+
+  const [eventName] = Object.keys(parsedEvent);
+  const eventContent = parsedEvent[eventName];
+
+  for (const [key, value] of Object.entries(eventContent)) {
+    if (typeof value === "object" && "low" in value && "high" in value) {
+      eventContent[key] = (value.low as bigint) + (value.high as bigint) * BigInt("0x100000000000000000000000000000000");
+    }
+  }
+
+  if ("from" in eventContent) {
+    eventContent.from_ = eventContent.from;
+    delete eventContent.from;
+  }
+
+  return parsedEvent;
+}
+type EVENTS_CHUNK = Awaited<ReturnType<typeof provider.getEvents>>;
+type EMITTED_EVENT = EVENTS_CHUNK["events"][number];
+
+async function pullEvents() {
+  const lastEvent = await AppDataSource.manager.findOne(Event, {
+    where: [{ blockIndex: Not(IsNull()) }],
+    order: { blockIndex: "desc" },
+  });
+
+  const latestAcceptedBlock = await provider.getBlockLatestAccepted();
+  const blockNumber = Math.min(
+    latestAcceptedBlock.block_number,
+    lastEvent?.blockIndex != null ? lastEvent.blockIndex : processSince
+  );
+  let eventsChunk: Awaited<ReturnType<typeof provider.getEvents>> | undefined;
+  let eventsPulled = 0;
+
+  do {
+    logger.info("Pulling events chunk.", {
+      chunk_size: 1000,
+      address: contractAddress,
+      from_block: {
+        block_number: blockNumber,
+      },
+      to_block: "pending",
+      continuation_token: eventsChunk?.continuation_token,
+    });
+
+    eventsChunk = await provider.getEvents({
+      chunk_size: 1000,
+      address: contractAddress,
+      from_block: {
+        block_number: blockNumber,
+      },
+      to_block: "pending",
+      continuation_token: eventsChunk?.continuation_token,
+    });
+
+    assert(eventsChunk != null, "Events chunk is null.");
+    assert(typeof eventsChunk === "object", "Events chunk is not an object.");
+    assert(Array.isArray(eventsChunk.events), "Events chunk is not an array.");
+
+    logger.debug("Events chunk.", {
+      eventsChunk,
+    });
+
+    eventsPulled += eventsChunk.events.length;
+
+    logger.info("Pulled events chunk.", {
+      blockNumber,
+      eventsPulled,
+      eventsChunkLength: eventsChunk.events.length,
+      continuationToken: eventsChunk.continuation_token,
+    });
+
+    if (eventsChunk.events.length > 0) {
+      const values: Event[] = [];
+
+      let blockHash: string | null = null;
+      let txHash: string | null = null;
+      let txIndex = -1;
+      let eventIndex = -1;
+
+      for (const emittedEvent of eventsChunk.events.values()) {
+        if (emittedEvent.block_hash !== blockHash) {
+          blockHash = emittedEvent.block_hash;
+          txHash = emittedEvent.transaction_hash;
+          txIndex = 0;
+          eventIndex = 0;
+        } else {
+          if (emittedEvent.transaction_hash !== txHash) {
+            txHash = emittedEvent.transaction_hash;
+            txIndex++;
+            eventIndex = 0;
+          } else {
+            eventIndex++;
+          }
+        }
+
+        logger.debug("Parsing event.", {
+          blockNumber: emittedEvent.block_number,
+          transactionHash: emittedEvent.transaction_hash,
+          OLD_CONTRACT_BLOCK_END,
+        });
+
+        const parsedEvent = parseEvent(emittedEvent);
+
+        const [eventName] = Object.keys(parsedEvent);
+
+        const eventContent = parsedEvent[eventName];
+
+        const event = new Event();
+
+        event.txHash = emittedEvent.transaction_hash;
+        event.eventIndex = eventIndex;
+        event.txIndex = txIndex;
+        event.blockIndex = emittedEvent.block_number;
+        event.blockHash = emittedEvent.block_hash;
+        event.name = eventNameMap[eventName] ?? eventName;
+        event.content = eventContent;
+        values.push(event);
+      }
+
+      await AppDataSource.manager.save(values);
+
+      logger.info("Inserted events chunk.");
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  } while (eventsChunk.continuation_token);
+
+  if (eventsPulled > 0) {
+    await refreshMaterializedViews();
+  }
 }
 
-const mapEvents = (block: Block, tx: TransactionReceipt): Event[] =>
-tx.events.filter(e => BigInt(e.from_address) === contractAddress).map((e, eventIndex) => {
-    const event = new Event();
-    event.txHash = tx.transaction_hash;
-    event.eventIndex = eventIndex;
-    event.txIndex = tx.transaction_index;
-    event.block = block;
-    event.blockIndex = block.blockIndex;
-    const processed = deserializeEvent(e.keys[0], e.data);
-    event.name = processed.name;
-    event.content = processed.value;
-    return event;
-})
+type MaterializedViewName = "balance" | "creator" | "infinite";
 
+async function refreshMaterializedView(name: MaterializedViewName) {
+  logger.info("Refreshing materialized view.", { name });
+  await AppDataSource.query(`refresh materialized view concurrently ${name};`);
+}
 
-const processNextBlock = async () => {
-    const lastBlock = await getLastSavedBlock();
-    const nextIndex = lastBlock ? lastBlock.blockIndex + 1 : processSince;
-    let blockRecord: Block;
-    let receipts: TransactionReceipt[];
+async function refreshMaterializedViews() {
+  logger.info("Refreshing all materialized views.");
 
-    if (lastBlock && lastBlock.status == "PENDING") {
-        const block = await starknet.getBlock(lastBlock.blockIndex) as any as ReturnedBlock;
-        if (block.block_hash == undefined) {
-            logger.info("Re-fetching pending block for new updates.");
-            const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
-            pendingBlock.block_hash ??= 'PENDING';
-            pendingBlock.block_number ??= lastBlock.blockIndex;
-            blockRecord = mapBlock(pendingBlock);
-            receipts = pendingBlock.transaction_receipts;
-        }
-        else {
-            logger.info("Pending block got accepted.");
-            await AppDataSource.manager.remove(lastBlock);
-            blockRecord = mapBlock(block);
-            receipts = block.transaction_receipts;
-            return;
-
-        }
-
-    }
-    else {
-        logger.info({nextIndex}, "Requesting new block.");
-        const block = await starknet.getBlock(nextIndex) as any as ReturnedBlock;
-
-        if (lastBlock && block.block_hash == undefined) {
-            logger.info({
-                previouslySavedHash: lastBlock.hash,
-            }, "Waiting for the next block.");
-            
-            const pendingBlock = await starknet.getBlock('pending') as any as ReturnedBlock;
-            if (pendingBlock.block_number == lastBlock.blockIndex) {
-                logger.info({
-                    previouslySavedHash: lastBlock.hash,
-                    previouslySavedIndex: lastBlock.blockIndex,
-                }, "No new block found.");
-                return;
-            }
-            pendingBlock.block_hash ??= 'PENDING';
-            pendingBlock.block_number ??= nextIndex;
-            blockRecord = mapBlock(pendingBlock);
-            receipts = pendingBlock.transaction_receipts;
-        } else if (lastBlock && block.parent_block_hash !== lastBlock.hash) {
-            logger.warn({
-                savedHash: lastBlock.hash,
-                expectedHash: block.parent_block_hash,
-                newBlockHash: block.block_hash,
-            }, "Deleting mismatched block.");
-            await AppDataSource.manager.remove(lastBlock);
-            // Now next processNextBlock will indexer previous block
-            return;
-        }
-        else {
-            logger.info({blockHash: Number(block.block_hash)
-            }, "Got a new block.");
-            blockRecord = mapBlock(block);
-            receipts = block.transaction_receipts;
-        }
-    }
-
-    const eventRecords = receipts.flatMap(receipt => mapEvents(blockRecord, receipt));
-
-    logger.info({
-        blockHash: Number(blockRecord.hash),
-        blockIndex: Number(blockRecord.blockIndex),
-        eventsCount: Number(eventRecords.length),
-    }, "Saving block.");
-    await AppDataSource.manager.save([
-        blockRecord,
-        ...eventRecords,
-        ]);
+  await refreshMaterializedView("balance");
+  await refreshMaterializedView("creator");
+  await refreshMaterializedView("infinite");
 }
 
 const updateTransactions = async () => {
-    const transactionsToUpdate = await AppDataSource.manager.find(
-        Transaction,
-        {
-            where: [
-            { status: "NOT_RECEIVED" },
-            { status: "RECEIVED" },
-            { status: "PENDING" },
-            // { status: "ACCEPTED_ON_L2" },
-            ]
-        }
-        )
-    for (let transaction in transactionsToUpdate) {
-        const tx = await starknet.getTransactionStatus(transactionsToUpdate[transaction].hash) as any as ReturnedTransactionStatus;
-        transactionsToUpdate[transaction].blockHash = tx.block_hash;
-        transactionsToUpdate[transaction].status = tx.tx_status;
-        transactionsToUpdate[transaction].updatedAt = new Date();
-        transactionsToUpdate[transaction].errorContent = tx.tx_failure_reason;
-        logger.info({
-            transactionHash: Number(transactionsToUpdate[transaction].hash),
-            transactionStatus: transactionsToUpdate[transaction].status,
-        }, "Updating transaction.");
-        await AppDataSource.manager.save(transactionsToUpdate[transaction]);
-    }
-}
+  const deletedTransactions = await AppDataSource.manager.query(`
+    DELETE
+    FROM TRANSACTION t
+    WHERE
+        (SELECT 'txHash'
+          FROM event e
+          WHERE e."txHash" = t.hash 
+          limit 1
+          ) IS NOT NULL
+        OR
+        t."createdAt" < (now() - interval '15 minutes')
+    returning hash;
+  `)
 
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-export const indexer = async () => {
-    try {
-        while (true) {
-            await processNextBlock();
-            await viewRefresher();
-            await updateTransactions();
-            await wait(3000);
-        }
-    } catch (e) {
-        if (e instanceof Error && e.message.includes("BLOCK_NOT_FOUND")) {
-            const match = e.message.match(/Block number (\d*) was not found/);
-            const block = match && match[1] && parseInt(match[1]);
-            logger.info({
-                blockIndex: block,
-            }, "Block does not exist yet.");
-        } else {
-            throw e;
-        }
+  if(deletedTransactions?.[0]?.length > 0){
+    logger.info(
+      deletedTransactions[0].map((t: any) => t.hash),
+      "Deleting transaction."
+    );
+  }
+  
+  const transactionsToUpdate = await AppDataSource.manager.find(Transaction);
+
+  for (let transaction in transactionsToUpdate) {
+    const tx = (await provider.getTransactionStatus(
+      transactionsToUpdate[transaction].hash
+    ));
+
+    transactionsToUpdate[transaction].status = tx.finality_status;
+    if(tx.execution_status === 'REVERTED'){
+      transactionsToUpdate[transaction].status = 'REJECTED';
     }
-}
+    transactionsToUpdate[transaction].updatedAt = new Date();
+    logger.info(
+      {
+        transactionHash: Number(transactionsToUpdate[transaction].hash),
+        transactionStatus: transactionsToUpdate[transaction].status,
+      },
+      "Updating transaction."
+    );
+    await AppDataSource.manager.save(transactionsToUpdate[transaction]);
+  }
+};
+
+const updatePendingMints = async () => {
+  const pendingMints = await AppDataSource.manager.find(Mints);
+  if (pendingMints.length === 0) {
+    console.log("No pending mints found");
+    return;
+  } else {
+    console.log("Found pending mints", pendingMints.length);
+  }
+
+  for (let mint in pendingMints) {
+    const mintDetail = pendingMints[mint];
+    const tx = await provider.getTransactionStatus(pendingMints[mint].txHash);
+
+    if (tx.execution_status === "REVERTED") {
+      logger.info(
+        {
+          transactionHash: mintDetail.txHash,
+          status: tx.execution_status,
+        },
+        "Removing failed mint"
+      );
+      AppDataSource.manager.remove(mintDetail);
+    } else if (mintDetail.status !== tx.finality_status) {
+      logger.info(
+        {
+          txHash: mintDetail.txHash,
+          execution_status: tx.execution_status,
+          finality_status: tx.finality_status,
+        },
+        "Updating mint status"
+      );
+      mintDetail.status = tx.finality_status;
+      await AppDataSource.manager.save(mintDetail);
+    }
+  }
+};
+
+// const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export const indexer = async () => {
+  await checkWhitelistProofs();
+  try {
+    while (true) {
+      await pullEvents();
+      await viewRefresher();
+      await updateTransactions();
+      await updatePendingMints();
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("BLOCK_NOT_FOUND")) {
+      const match = e.message.match(/Block number (\d*) was not found/);
+      const block = match && match[1] && parseInt(match[1]);
+      logger.info(
+        {
+          blockIndex: block,
+        },
+        "Block does not exist yet."
+      );
+    } else {
+      throw e;
+    }
+  }
+};
