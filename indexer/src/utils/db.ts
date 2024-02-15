@@ -3,8 +3,6 @@
 import { DataSource } from "typeorm";
 import { PostgresDriver } from "typeorm/driver/postgres/PostgresDriver";
 import { ColumnMetadata } from "typeorm/metadata/ColumnMetadata";
-import { Refresh } from "../entity/refresh";
-import { Block } from "../entity/block";
 import { Event } from "../entity/event";
 import { Transaction } from "../entity/transaction";
 import { Balance } from "../view/balance";
@@ -41,7 +39,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: false,
     logging: false,
-    entities: [Block, Event, Refresh, Transaction, Balance, Creator, Infinite, Mints, Whitelist],
+    entities: [Event, Transaction, Balance, Creator, Infinite, Mints, Whitelist],
     migrations: ["dist/migrations/*.js"],
     subscribers: [],
 });
