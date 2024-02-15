@@ -1,5 +1,10 @@
 # Game of Life
 
+## Docs for Yuki Gol2 indexer
+- [Indexer](/indexer/README.md)
+- [Contract](https://github.com/0xDegenDeveloper/gol2)
+
+
 ## Table of contents
 1. [Overview](#overview)
 2. [Game modes](#game_modes)
