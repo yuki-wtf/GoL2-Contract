@@ -10,14 +10,15 @@ type DetailsObject = {
     };
 }
 
-export const checkWhitelistProofs = async () => {
+/* 
+  This function will read the details.json file and all the .json files in the whitelist folder and save the proofs to the database.
+  You will need to run this function after you have unzipped the whitelist proofs folder in 'indexer' directory.
+  You might only use this function once, when you are setting up the indexer for the first time with empty fresh db.
+  Optionally, you can import whitelist proofs csv file to the database manually in which case you don't need to run this function.
+*/
+
+export const saveWhitelistProofsToDB = async () => {
   try {
-    const res = await AppDataSource.query(`SELECT EXISTS(SELECT 1 FROM whitelist) AS isNotEmpty;`);
-    const isNotEmpty = res[0].isnotempty;
-    if (isNotEmpty) {
-      console.log("Whitelist is not empty. Skipping.");
-      return;
-    }
     const whitelistFiles = (await fs.readdir("whitelist")).filter((filename) => filename.endsWith(".json") && filename !== "details.json");
     const detailsString = await fs.readFile(`whitelist/details.json`, "utf-8")
     const details: DetailsObject = JSON.parse(detailsString);
@@ -27,7 +28,7 @@ export const checkWhitelistProofs = async () => {
       console.log(`${filename} saved to DB.`);
     });
   } catch (err) {
-    console.error("checkWhitelistProofs", err);
+    console.error("saveWhitelistProofsToDB", err);
   }
 
 };

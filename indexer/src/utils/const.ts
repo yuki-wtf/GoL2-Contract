@@ -1,9 +1,9 @@
 export const HASH_LENGTH = 65;
 
 export const indexerApp = "indexer";
-export const viewRefresherApp = "viewRefresher";
-export const generator = "generator";
-export const apps = [indexerApp, viewRefresherApp, generator];
+export const whitelistApp= "whitelist";
+export const apps = [indexerApp, whitelistApp];
+
 export const eventNameMap = {
   GameCreated: "game_created",
   GameEvolved: "game_evolved",

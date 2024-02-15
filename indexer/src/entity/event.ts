@@ -1,6 +1,5 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryColumn, ValueTransformer } from "typeorm"
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from "typeorm";
 import { HASH_LENGTH } from "../utils/const";
-import { Block } from "./block";
 
 @Entity()
 export class Event {
