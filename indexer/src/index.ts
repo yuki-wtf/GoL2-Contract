@@ -1,3 +1,8 @@
+import dotenv from 'dotenv'
+if(process.env.NODE_ENV !== "production") {
+    dotenv.config();
+}
+
 import { AppDataSource } from "./utils/db"
 import { logger } from "./utils/logger";
 import { appType } from "./utils/envs";

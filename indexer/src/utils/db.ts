@@ -1,5 +1,9 @@
-// Uncomment below in local development
-// import 'dotenv/config'
+import dotenv from 'dotenv'
+// Need to load .env file here as well, because typeorm is used in this file.
+if(process.env.NODE_ENV !== "production") {
+    dotenv.config();
+}
+
 import { DataSource } from "typeorm";
 import { PostgresDriver } from "typeorm/driver/postgres/PostgresDriver";
 import { ColumnMetadata } from "typeorm/metadata/ColumnMetadata";
