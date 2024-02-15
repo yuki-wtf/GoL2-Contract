@@ -1,4 +1,6 @@
-import { DataSource, IsNull, Not } from "typeorm";
+// Uncomment below in local development
+// import 'dotenv/config'
+import { DataSource } from "typeorm";
 import { PostgresDriver } from "typeorm/driver/postgres/PostgresDriver";
 import { ColumnMetadata } from "typeorm/metadata/ColumnMetadata";
 import { Refresh } from "../entity/refresh";
@@ -10,9 +12,7 @@ import { Creator } from '../view/creator';
 import { Infinite } from '../view/infinite';
 import { Mints } from "../entity/mints";
 import { Whitelist } from "../entity/whitelist";
-
-// Uncomment below in local development
-// import 'dotenv/config'
+import { logger } from "./logger";
 
 // We need to store bigints in jsonb column, typeorm doesn't support that.
 // Transformers in typeorm run _before_ typeorm's JSON.stringify run, so it is problematic
@@ -41,36 +41,20 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: false,
     logging: false,
-    entities: [Block, Event, Transaction, Refresh, Balance, Creator, Infinite, Mints, Whitelist],
+    entities: [Block, Event, Refresh, Transaction, Balance, Creator, Infinite, Mints, Whitelist],
     migrations: ["dist/migrations/*.js"],
     subscribers: [],
 });
 
-export const getLastSavedBlock = async (): Promise<Block | null> =>
-    AppDataSource.manager.findOne(
-        Block,
-        {
-            where: [{hash: Not(IsNull())}],
-            order: {blockIndex: "desc"},
-        }
-    )
-
-export const getBlockWithLatestIndexNumber = async (): Promise<Block | null> =>
-    AppDataSource.manager.findOne(
-        Block,
-        {
-            where: [{hash: Not(IsNull()), blockIndex: Not(IsNull())}],
-            order: {blockIndex: "desc"},
-        }
-    )
-
-export const getLastRefresh = async (): Promise<Refresh | null> =>
-    AppDataSource.manager.findOne(
-        Refresh,
-        {
-            where: [{hash: Not(IsNull())}],
-            order: {blockIndex: "desc"},
-        }
-    )
-
 export const getAllViews = () => AppDataSource.entityMetadatas.filter(e => e.tableMetadataArgs.type === "view").map(e => e.tablePath);
+
+export async function refreshMaterializedViews() {
+    logger.info("Refreshing all materialized views.");
+    
+    const allViews = getAllViews();
+    for (const view of allViews) {
+      logger.info("Refreshing materialized view.", { view });
+      await AppDataSource.query(`refresh materialized view concurrently ${view};`);
+    }
+  }
+

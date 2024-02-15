@@ -1,86 +1,19 @@
-import { AppDataSource } from "./utils/db";
+import { AppDataSource, refreshMaterializedViews } from "./utils/db";
 import { requiredEnv } from "./utils/envs";
-import {
-  GetTransactionReceiptResponse,
-  ParsedEvent,
-} from "starknet";
 import { Event } from "./entity/event";
 import { Transaction } from "./entity/transaction";
 import { logger } from "./utils/logger";
-import { viewRefresher } from "./viewRefresher";
 import { Mints } from "./entity/mints";
-import {
-  OLD_CONTRACT_BLOCK_END,
-  contract,
-  oldContract,
-  provider,
-} from "./utils/contract";
+import { OLD_CONTRACT_BLOCK_END, provider } from "./utils/contract";
 import { IsNull, Not } from "typeorm";
 import assert from "assert";
 import { eventNameMap } from "./utils/const";
-import { checkWhitelistProofs } from "./utils/checkWhitelistProofs";
-// import { saveWhitelistProofsFromFileToDB } from "./utils/saveWhitelistProofsFromFileToDB";
-
-type ReturnedTransactionStatus = {
-  tx_status: string;
-  block_hash: string;
-  tx_failure_reason: string[];
-};
+import { parseEvent } from "./utils/events";
 
 const processSince = parseInt(requiredEnv("PROCESS_SINCE"));
 const contractAddress = requiredEnv("CONTRACT_ADDRESS");
 
-function parseEvent(emittedEvent: EMITTED_EVENT): ParsedEvent {
-  let parsedEvent: ParsedEvent | undefined = undefined;
-  const shouldUseNewContract = emittedEvent.block_number == null || emittedEvent.block_number > OLD_CONTRACT_BLOCK_END;
-
-  try {
-    const parsingContract = shouldUseNewContract ? contract : oldContract;
-    parsedEvent = parsingContract
-      .parseEvents({
-        events: [emittedEvent],
-      } as GetTransactionReceiptResponse)
-      .at(0);
-  } catch (e) {
-    console.error("Error parsing event with default parser", e);
-  }
-  
-  if (parsedEvent == undefined) {
-    console.debug("Parsing with fallback parser");
-    const parsingContract = shouldUseNewContract ? oldContract : contract;
-    try {
-      parsedEvent = parsingContract
-        .parseEvents({
-          events: [emittedEvent],
-        } as GetTransactionReceiptResponse)
-        .at(0);
-    } catch (e) {
-      console.error("Error parsing event with fallback parser", e);
-    }
-  }
-
-  assert(parsedEvent != null, "Parsed event is null.");
-
-  const [eventName] = Object.keys(parsedEvent);
-  const eventContent = parsedEvent[eventName];
-
-  for (const [key, value] of Object.entries(eventContent)) {
-    if (typeof value === "object" && "low" in value && "high" in value) {
-      eventContent[key] = (value.low as bigint) + (value.high as bigint) * BigInt("0x100000000000000000000000000000000");
-    }
-  }
-
-  if ("from" in eventContent) {
-    eventContent.from_ = eventContent.from;
-    delete eventContent.from;
-  }
-
-  return parsedEvent;
-}
-type EVENTS_CHUNK = Awaited<ReturnType<typeof provider.getEvents>>;
-type EMITTED_EVENT = EVENTS_CHUNK["events"][number];
-
-async function pullEvents() {
+const pullEvents = async () => {
   const lastEvent = await AppDataSource.manager.findOne(Event, {
     where: [{ blockIndex: Not(IsNull()) }],
     order: { blockIndex: "desc" },
@@ -193,20 +126,7 @@ async function pullEvents() {
   }
 }
 
-type MaterializedViewName = "balance" | "creator" | "infinite";
 
-async function refreshMaterializedView(name: MaterializedViewName) {
-  logger.info("Refreshing materialized view.", { name });
-  await AppDataSource.query(`refresh materialized view concurrently ${name};`);
-}
-
-async function refreshMaterializedViews() {
-  logger.info("Refreshing all materialized views.");
-
-  await refreshMaterializedView("balance");
-  await refreshMaterializedView("creator");
-  await refreshMaterializedView("infinite");
-}
 
 const updateTransactions = async () => {
   const deletedTransactions = await AppDataSource.manager.query(`
@@ -292,11 +212,10 @@ const updatePendingMints = async () => {
 
 // const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const indexer = async () => {
-  await checkWhitelistProofs();
+
   try {
     while (true) {
       await pullEvents();
-      await viewRefresher();
       await updateTransactions();
       await updatePendingMints();
     }
